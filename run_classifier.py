@@ -21,10 +21,12 @@ from __future__ import print_function
 import collections
 import csv
 import os
+
+import tensorflow as tf
+
 import modeling
 import optimization
 import tokenization
-import tensorflow as tf
 
 flags = tf.flags
 
@@ -162,11 +164,11 @@ class InputFeatures(object):
   """A single set of features of data."""
 
   def __init__(self,
-               input_ids,
-               input_mask,
-               segment_ids,
-               label_id,
-               is_real_example=True):
+      input_ids,
+      input_mask,
+      segment_ids,
+      label_id,
+      is_real_example=True):
     self.input_ids = input_ids
     self.input_mask = input_mask
     self.segment_ids = segment_ids
@@ -374,8 +376,49 @@ class ColaProcessor(DataProcessor):
     return examples
 
 
+class SocialHxProcessor(DataProcessor):
+  """Processor for the CoLA data set (GLUE version)."""
+
+  def get_train_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+  def get_dev_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+  def get_test_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+  def get_labels(self):
+    """See base class."""
+    return [
+      "MedicationOrder",
+      "Smoking",
+      "Alcohol",
+      "Drugs",
+      "Diabetes",
+      "Weight",
+    ]
+
+  def _create_examples(self, lines, set_type):
+    """Creates examples for the training and dev sets."""
+    examples = []
+    for (i, line) in enumerate(lines):
+      guid = "%s-%s" % (set_type, i)
+      text_a = tokenization.convert_to_unicode(line[0])
+      label = tokenization.convert_to_unicode(line[1])
+      examples.append(
+          InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+    return examples
+
+
 def convert_single_example(ex_index, example, label_list, max_seq_length,
-                           tokenizer):
+    tokenizer):
   """Converts a single `InputExample` into a single `InputFeatures`."""
 
   if isinstance(example, PaddingInputExample):
@@ -507,15 +550,15 @@ def file_based_convert_examples_to_features(
 
 
 def file_based_input_fn_builder(input_file, seq_length, is_training,
-                                drop_remainder):
+    drop_remainder):
   """Creates an `input_fn` closure to be passed to TPUEstimator."""
 
   name_to_features = {
-      "input_ids": tf.FixedLenFeature([seq_length], tf.int64),
-      "input_mask": tf.FixedLenFeature([seq_length], tf.int64),
-      "segment_ids": tf.FixedLenFeature([seq_length], tf.int64),
-      "label_ids": tf.FixedLenFeature([], tf.int64),
-      "is_real_example": tf.FixedLenFeature([], tf.int64),
+    "input_ids": tf.FixedLenFeature([seq_length], tf.int64),
+    "input_mask": tf.FixedLenFeature([seq_length], tf.int64),
+    "segment_ids": tf.FixedLenFeature([seq_length], tf.int64),
+    "label_ids": tf.FixedLenFeature([], tf.int64),
+    "is_real_example": tf.FixedLenFeature([], tf.int64),
   }
 
   def _decode_record(record, name_to_features):
@@ -572,7 +615,7 @@ def _truncate_seq_pair(tokens_a, tokens_b, max_length):
 
 
 def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
-                 labels, num_labels, use_one_hot_embeddings):
+    labels, num_labels, use_one_hot_embeddings):
   """Creates a classification model."""
   model = modeling.BertModel(
       config=bert_config,
@@ -617,11 +660,12 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
 
 
 def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
-                     num_train_steps, num_warmup_steps, use_tpu,
-                     use_one_hot_embeddings):
+    num_train_steps, num_warmup_steps, use_tpu,
+    use_one_hot_embeddings):
   """Returns `model_fn` closure for TPUEstimator."""
 
-  def model_fn(features, labels, mode, params):  # pylint: disable=unused-argument
+  def model_fn(features, labels, mode,
+      params):  # pylint: disable=unused-argument
     """The `model_fn` for TPUEstimator."""
 
     tf.logging.info("*** Features ***")
@@ -649,7 +693,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
     scaffold_fn = None
     if init_checkpoint:
       (assignment_map, initialized_variable_names
-      ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
+       ) = modeling.get_assignment_map_from_checkpoint(tvars, init_checkpoint)
       if use_tpu:
 
         def tpu_scaffold():
@@ -687,8 +731,8 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
             labels=label_ids, predictions=predictions, weights=is_real_example)
         loss = tf.metrics.mean(values=per_example_loss, weights=is_real_example)
         return {
-            "eval_accuracy": accuracy,
-            "eval_loss": loss,
+          "eval_accuracy": accuracy,
+          "eval_loss": loss,
         }
 
       eval_metrics = (metric_fn,
@@ -734,22 +778,22 @@ def input_fn_builder(features, seq_length, is_training, drop_remainder):
     # not use Dataset.from_generator() because that uses tf.py_func which is
     # not TPU compatible. The right way to load data is with TFRecordReader.
     d = tf.data.Dataset.from_tensor_slices({
-        "input_ids":
-            tf.constant(
-                all_input_ids, shape=[num_examples, seq_length],
-                dtype=tf.int32),
-        "input_mask":
-            tf.constant(
-                all_input_mask,
-                shape=[num_examples, seq_length],
-                dtype=tf.int32),
-        "segment_ids":
-            tf.constant(
-                all_segment_ids,
-                shape=[num_examples, seq_length],
-                dtype=tf.int32),
-        "label_ids":
-            tf.constant(all_label_ids, shape=[num_examples], dtype=tf.int32),
+      "input_ids":
+        tf.constant(
+            all_input_ids, shape=[num_examples, seq_length],
+            dtype=tf.int32),
+      "input_mask":
+        tf.constant(
+            all_input_mask,
+            shape=[num_examples, seq_length],
+            dtype=tf.int32),
+      "segment_ids":
+        tf.constant(
+            all_segment_ids,
+            shape=[num_examples, seq_length],
+            dtype=tf.int32),
+      "label_ids":
+        tf.constant(all_label_ids, shape=[num_examples], dtype=tf.int32),
     })
 
     if is_training:
@@ -765,7 +809,7 @@ def input_fn_builder(features, seq_length, is_training, drop_remainder):
 # This function is not used by this file but is still used by the Colab and
 # people who depend on it.
 def convert_examples_to_features(examples, label_list, max_seq_length,
-                                 tokenizer):
+    tokenizer):
   """Convert a set of `InputExample`s to a list of `InputFeatures`."""
 
   features = []
@@ -784,10 +828,11 @@ def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
   processors = {
-      "cola": ColaProcessor,
-      "mnli": MnliProcessor,
-      "mrpc": MrpcProcessor,
-      "xnli": XnliProcessor,
+    "cola": ColaProcessor,
+    "mnli": MnliProcessor,
+    "mrpc": MrpcProcessor,
+    "xnli": XnliProcessor,
+    "socialhx": SocialHxProcessor,
   }
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
