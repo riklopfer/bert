@@ -912,8 +912,13 @@ def main(_):
 
   if FLAGS.do_train:
     train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
-    file_based_convert_examples_to_features(
-        train_examples, label_list, FLAGS.max_seq_length, tokenizer, train_file)
+    if os.path.exists(train_file):
+      tf.logging.info("train file (%s) already exists -- no overwriting.",
+                      train_file)
+    else:
+      file_based_convert_examples_to_features(
+          train_examples, label_list, FLAGS.max_seq_length, tokenizer,
+          train_file)
     tf.logging.info("***** Running training *****")
     tf.logging.info("  Num examples = %d", len(train_examples))
     tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
@@ -938,8 +943,12 @@ def main(_):
         eval_examples.append(PaddingInputExample())
 
     eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
-    file_based_convert_examples_to_features(
-        eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
+    if os.path.exists(eval_file):
+      tf.logging.info("eval file (%s) already exists -- not overwriting",
+                      eval_file)
+    else:
+      file_based_convert_examples_to_features(
+          eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
 
     tf.logging.info("***** Running evaluation *****")
     tf.logging.info("  Num examples = %d (%d actual, %d padding)",
