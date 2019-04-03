@@ -22,6 +22,7 @@ import collections
 import csv
 import os
 
+import numpy as np
 import tensorflow as tf
 
 import modeling
@@ -1015,20 +1016,58 @@ def main(_):
 
     result = estimator.predict(input_fn=predict_input_fn)
 
-    output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
-    with tf.gfile.GFile(output_predict_file, "w") as writer:
+    # Write predictions and text
+    labels = processor.get_labels()
+    predictions_file = os.path.join(FLAGS.output_dir, "predictions.tsv")
+    with tf.gfile.GFile(predictions_file, "w") as writer:
       num_written_lines = 0
       tf.logging.info("***** Predict results *****")
+      if predict_examples[0].text_b is None:
+        tsv_header = ("TextA", "Actual", "Predicted")
+      else:
+        tsv_header = ("TextA", "TextB", "Actual", "Predicted")
+
+      writer.write("\t".join(tsv_header) + "\n")
       for (i, prediction) in enumerate(result):
+        if i % (num_actual_predict_examples // 10) == 0:
+          tf.logging.info("Processing %d/%d", i, num_actual_predict_examples)
+
         probabilities = prediction["probabilities"]
         if i >= num_actual_predict_examples:
           break
-        output_line = "\t".join(
-            str(class_probability)
-            for class_probability in probabilities) + "\n"
+
+        # text elements
+        tsv_elements = [predict_examples[i].text_a]
+        if predict_examples[i].text_b is not None:
+          tsv_elements.append(predict_examples[i].text_b)
+
+        # predicted label
+        predicted_idx = np.argmax(probabilities)
+        predicted_label = labels[predicted_idx]
+        tsv_elements.append(predicted_label)
+
+        # Actual label
+        tsv_elements.append(predict_examples[i].label)
+        output_line = "\t".join(tsv_elements) + "\n"
         writer.write(output_line)
         num_written_lines += 1
     assert num_written_lines == num_actual_predict_examples
+
+    # # Write raw probabilities
+    # output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
+    # with tf.gfile.GFile(output_predict_file, "w") as writer:
+    #   num_written_lines = 0
+    #   tf.logging.info("***** Predict results *****")
+    #   for (i, prediction) in enumerate(result):
+    #     probabilities = prediction["probabilities"]
+    #     if i >= num_actual_predict_examples:
+    #       break
+    #     output_line = "\t".join(
+    #         str(class_probability)
+    #         for class_probability in probabilities) + "\n"
+    #     writer.write(output_line)
+    #     num_written_lines += 1
+    # assert num_written_lines == num_actual_predict_examples
 
 
 if __name__ == "__main__":
