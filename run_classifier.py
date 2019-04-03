@@ -729,13 +729,30 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
       def metric_fn(per_example_loss, label_ids, logits, is_real_example):
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
+
+        def precision_for_label(label_id):
+          return tf.metrics.precision(label_ids == label_id,
+                                      predictions == label_id)
+
+        def recall_for_label(label_id):
+          return tf.metrics.recall(label_ids == label_id,
+                                   predictions == label_id)
+
         accuracy = tf.metrics.accuracy(
             labels=label_ids, predictions=predictions, weights=is_real_example)
         loss = tf.metrics.mean(values=per_example_loss, weights=is_real_example)
-        return {
+        metrics = {
           "eval_accuracy": accuracy,
           "eval_loss": loss,
         }
+
+        # Add per-class precision and recall
+        for label_id in range(num_labels):
+          metrics["{}_precision".format(label_id)] = precision_for_label(
+            label_id)
+          metrics["{}_recall".format(label_id)] = recall_for_label(label_id)
+
+        return metrics
 
       eval_metrics = (metric_fn,
                       [per_example_loss, label_ids, logits, is_real_example])
