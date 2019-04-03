@@ -731,12 +731,12 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
 
         def precision_for_label(label_id):
-          return tf.metrics.precision(label_ids == label_id,
-                                      predictions == label_id)
+          return tf.metrics.precision(tf.equal(label_ids, label_id),
+                                      tf.equal(predictions, label_id))
 
         def recall_for_label(label_id):
-          return tf.metrics.recall(label_ids == label_id,
-                                   predictions == label_id)
+          return tf.metrics.recall(tf.equal(label_ids, label_id),
+                                   tf.equal(predictions, label_id))
 
         accuracy = tf.metrics.accuracy(
             labels=label_ids, predictions=predictions, weights=is_real_example)
@@ -749,7 +749,7 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         # Add per-class precision and recall
         for label_id in range(num_labels):
           metrics["{}_precision".format(label_id)] = precision_for_label(
-            label_id)
+              label_id)
           metrics["{}_recall".format(label_id)] = recall_for_label(label_id)
 
         return metrics
