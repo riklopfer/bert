@@ -748,9 +748,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         # Add per-class precision and recall
         for label_id in range(num_labels):
-          metrics["Precision_{}".format(label_id)] = precision_for_label(
+          metrics["{}_Precision".format(label_id)] = precision_for_label(
               label_id)
-          metrics["Recall_{}".format(label_id)] = recall_for_label(label_id)
+          metrics["{}_Recall".format(label_id)] = recall_for_label(label_id)
 
         return metrics
 
@@ -994,9 +994,11 @@ def main(_):
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
-      for key, value in sorted(result.iteritems()):
-        if key.startswith("Precision_") or key.startswith("Recall_"):
-          metric_name, label_id = key.split("_")
+      for key in sorted(result.keys()):
+        value = result[key]
+
+        if key.endswith("_Precision") or key.endswith("_Recall"):
+          label_id, metric_name = key.rsplit("_", 1)
           key = "{} {}".format(label_list[int(label_id)], metric_name)
 
         tf.logging.info("  %s = %s", key, str(value))
