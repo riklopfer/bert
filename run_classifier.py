@@ -748,9 +748,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         # Add per-class precision and recall
         for label_id in range(num_labels):
-          metrics["{}_precision".format(label_id)] = precision_for_label(
+          metrics[(label_id, "precision")] = precision_for_label(
               label_id)
-          metrics["{}_recall".format(label_id)] = recall_for_label(label_id)
+          metrics[(label_id, "recall")] = recall_for_label(label_id)
 
         return metrics
 
@@ -995,6 +995,12 @@ def main(_):
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
       for key in sorted(result.keys()):
+        try:
+          label_id, metric_name = key
+          key = "{} {}".format(label_list[label_id], metric_name)
+        except ValueError:
+          pass
+
         tf.logging.info("  %s = %s", key, str(result[key]))
         writer.write("%s = %s\n" % (key, str(result[key])))
 
@@ -1034,7 +1040,6 @@ def main(_):
     result = estimator.predict(input_fn=predict_input_fn)
 
     # Write predictions and text
-    labels = processor.get_labels()
     predictions_file = os.path.join(FLAGS.output_dir, "predictions.tsv")
     with tf.gfile.GFile(predictions_file, "w") as writer:
       num_written_lines = 0
@@ -1060,7 +1065,7 @@ def main(_):
 
         # predicted label
         predicted_idx = np.argmax(probabilities)
-        predicted_label = labels[predicted_idx]
+        predicted_label = label_list[predicted_idx]
         tsv_elements.append(predicted_label)
 
         # Actual label
