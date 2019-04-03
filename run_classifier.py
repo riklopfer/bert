@@ -748,9 +748,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         # Add per-class precision and recall
         for label_id in range(num_labels):
-          metrics[(label_id, "precision")] = precision_for_label(
+          metrics["Precision_{}".format(label_id)] = precision_for_label(
               label_id)
-          metrics[(label_id, "recall")] = recall_for_label(label_id)
+          metrics["Recall_{}".format(label_id)] = recall_for_label(label_id)
 
         return metrics
 
@@ -994,15 +994,13 @@ def main(_):
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
-      for key in sorted(result.keys()):
-        try:
-          label_id, metric_name = key
-          key = "{} {}".format(label_list[label_id], metric_name)
-        except ValueError:
-          pass
+      for key, value in sorted(result.iteritems()):
+        if key.startswith("Precision_") or key.startswith("Recall_"):
+          metric_name, label_id = key.split("_")
+          key = "{} {}".format(label_list[int(label_id)], metric_name)
 
-        tf.logging.info("  %s = %s", key, str(result[key]))
-        writer.write("%s = %s\n" % (key, str(result[key])))
+        tf.logging.info("  %s = %s", key, str(value))
+        writer.write("%s = %s\n" % (key, str(value)))
 
   if FLAGS.do_predict:
     predict_examples = processor.get_test_examples(FLAGS.data_dir)
