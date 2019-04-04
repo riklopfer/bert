@@ -167,6 +167,9 @@ class FullTokenizer(object):
     placeholders_vocab = None
     if placeholders_file is not None:
       placeholders_vocab = load_vocab(placeholders_file)
+      for token in placeholders_vocab:
+        assert token in self.vocab
+
     self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case, placeholders=placeholders_vocab)
     self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
