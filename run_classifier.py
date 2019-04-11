@@ -1078,7 +1078,7 @@ def main(_):
         tsv_elements.append(predict_examples[i].label)
 
         # Predicted probability
-        tsv_elements.append(probabilities[predicted_idx])
+        tsv_elements.append(str(probabilities[predicted_idx]))
 
         output_line = "\t".join(tsv_elements) + "\n"
         writer.write(output_line)
