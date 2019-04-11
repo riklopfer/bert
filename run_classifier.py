@@ -1050,18 +1050,19 @@ def main(_):
       num_written_lines = 0
       tf.logging.info("***** Predict results *****")
       if predict_examples[0].text_b is None:
-        tsv_header = ("TextA", "Actual", "Predicted")
+        tsv_header = ("TextA", "Actual", "Predicted", "Probability")
       else:
-        tsv_header = ("TextA", "TextB", "Actual", "Predicted")
+        tsv_header = ("TextA", "TextB", "Actual", "Predicted", "Probability")
 
       writer.write("\t".join(tsv_header) + "\n")
       for (i, prediction) in enumerate(result):
         if i % (num_actual_predict_examples // 10) == 0:
           tf.logging.info("Processing %d/%d", i, num_actual_predict_examples)
 
-        probabilities = prediction["probabilities"]
         if i >= num_actual_predict_examples:
           break
+
+        probabilities = prediction["probabilities"]
 
         # text elements
         tsv_elements = [predict_examples[i].text_a]
@@ -1075,6 +1076,10 @@ def main(_):
 
         # Actual label
         tsv_elements.append(predict_examples[i].label)
+
+        # Predicted probability
+        tsv_elements.append(probabilities[predicted_idx])
+
         output_line = "\t".join(tsv_elements) + "\n"
         writer.write(output_line)
         num_written_lines += 1
