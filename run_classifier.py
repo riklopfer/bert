@@ -206,7 +206,8 @@ class DataProcessor(object):
       reader = csv.reader(f, delimiter="\t", quotechar=quotechar)
       lines = []
       for line in reader:
-        lines.append(line)
+        if ''.join(line).strip():
+          lines.append(line)
       return lines
 
 
