@@ -998,7 +998,7 @@ def main(_):
     result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
 
     # Compute F1
-    for label_id in label_list:
+    for label_id in range(len(label_list)):
       precision = result.get("{}_Precision".format(label_id))
       recall = result.get("{}_Recall".format(label_id))
       if precision is None or recall is None:
