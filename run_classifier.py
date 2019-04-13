@@ -1014,6 +1014,7 @@ def main(_):
         if key.endswith("_Precision") or key.endswith("_Recall") or key.endswith("_F1"):
           label_id, metric_name = key.rsplit("_", 1)
           key = "{} {}".format(label_list[int(label_id)], metric_name)
+          value = "{:.3%}".format(value)
 
         tf.logging.info("  %s = %s", key, str(value))
         writer.write("%s = %s\n" % (key, str(value)))
