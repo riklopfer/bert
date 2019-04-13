@@ -1011,7 +1011,7 @@ def main(_):
       for key in sorted(result.keys()):
         value = result[key]
 
-        if key.endswith("_Precision") or key.endswith("_Recall"):
+        if key.endswith("_Precision") or key.endswith("_Recall") or key.endswith("_F1"):
           label_id, metric_name = key.rsplit("_", 1)
           key = "{} {}".format(label_list[int(label_id)], metric_name)
 
