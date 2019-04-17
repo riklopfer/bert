@@ -199,6 +199,9 @@ class DataProcessor(object):
     """Gets the list of labels for this data set."""
     raise NotImplementedError()
 
+  def get_negative_label(self):
+    return None
+
   @classmethod
   def _read_tsv(cls, input_file, quotechar=None):
     """Reads a tab separated value file."""
@@ -410,6 +413,9 @@ class SocialHxProcessor(DataProcessor):
       "Weight",
       "NoLabel"
     ]
+
+  def get_negative_label(self):
+    return "NoLabel"
 
   def _create_examples(self, lines, set_type):
     """Creates examples for the training and dev sets."""
@@ -1006,11 +1012,20 @@ def main(_):
       result["{}_F1".format(label_id)] = 2 * precision * recall / (precision + recall)
 
     # Compute average F1
+    exclude_ids = set()
+    if processor.get_negative_label() is not None:
+      exclude_ids.add(label_list.index(processor.get_negative_label()))
+
     total_f1 = 0.
+    # Exclude the last one -- assume that the last one is the NO_LABEL class
     for label_id in range(len(label_list)):
-      total_f1 += result["{}_F1".format(label_id)]
+      if label_id not in exclude_ids:
+        total_f1 += result["{}_F1".format(label_id)]
+      else:
+        tf.logging.info("Excluding F1 for '%s' from Average F1", label_list[label_id])
+
     # Cannot use '_' or else 'Average' will be treated as int
-    result["Average F1"] = total_f1 / len(label_list)
+    result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
 
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
