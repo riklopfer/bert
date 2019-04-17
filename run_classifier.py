@@ -1009,7 +1009,8 @@ def main(_):
     total_f1 = 0.
     for label_id in range(len(label_list)):
       total_f1 += result["{}_F1".format(label_id)]
-    result["Average_F1"] = total_f1 / len(label_list)
+    # Cannot use '_' or else 'Average' will be treated as int
+    result["Average F1"] = total_f1 / len(label_list)
 
     output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
