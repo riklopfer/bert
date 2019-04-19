@@ -1050,7 +1050,10 @@ def main(_):
       recall = result.get("{}_Recall".format(label_id))
       if precision is None or recall is None:
         continue
-      result["{}_F1".format(label_id)] = 2 * precision * recall / (precision + recall)
+      if precision == 0 or recall == 0:
+        result["{}_F1".format(label_id)] = 0.
+      else:
+        result["{}_F1".format(label_id)] = 2 * precision * recall / (precision + recall)
 
     # Compute average F1
     exclude_ids = set()
