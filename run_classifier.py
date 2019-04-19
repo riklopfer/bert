@@ -195,7 +195,7 @@ class DataProcessor(object):
     """Gets a collection of `InputExample`s for prediction."""
     raise NotImplementedError()
 
-  def get_labels(self):
+  def get_labels(self, data_dir=None):
     """Gets the list of labels for this data set."""
     raise NotImplementedError()
 
@@ -257,7 +257,7 @@ class XnliProcessor(DataProcessor):
           InputExample(guid=guid, text_a=text_a, text_b=text_b, label=label))
     return examples
 
-  def get_labels(self):
+  def get_labels(self, data_dir=None):
     """See base class."""
     return ["contradiction", "entailment", "neutral"]
 
@@ -281,7 +281,7 @@ class MnliProcessor(DataProcessor):
     return self._create_examples(
         self._read_tsv(os.path.join(data_dir, "test_matched.tsv")), "test")
 
-  def get_labels(self):
+  def get_labels(self, data_dir=None):
     """See base class."""
     return ["contradiction", "entailment", "neutral"]
 
@@ -321,7 +321,7 @@ class MrpcProcessor(DataProcessor):
     return self._create_examples(
         self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
 
-  def get_labels(self):
+  def get_labels(self, data_dir=None):
     """See base class."""
     return ["0", "1"]
 
@@ -361,7 +361,7 @@ class ColaProcessor(DataProcessor):
     return self._create_examples(
         self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
 
-  def get_labels(self):
+  def get_labels(self, data_dir=None):
     """See base class."""
     return ["0", "1"]
 
@@ -402,7 +402,7 @@ class SocialHxProcessor(DataProcessor):
     return self._create_examples(
         self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
 
-  def get_labels(self):
+  def get_labels(self, data_dir=None):
     """See base class."""
     return [
       "MedicationOrder",
@@ -416,6 +416,46 @@ class SocialHxProcessor(DataProcessor):
 
   def get_negative_label(self):
     return "NoLabel"
+
+  def _create_examples(self, lines, set_type):
+    """Creates examples for the training and dev sets."""
+    examples = []
+    for (i, line) in enumerate(filter(None, lines)):
+      guid = "%s-%s" % (set_type, i)
+      text_a = tokenization.convert_to_unicode(line[0])
+      label = tokenization.convert_to_unicode(line[1])
+      examples.append(
+          InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+    return examples
+
+class SectionCodeProcessor(DataProcessor):
+  """Processor for the CoLA data set (GLUE version)."""
+
+  def get_train_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+  def get_dev_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+  def get_test_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+  def get_labels(self, data_dir=None):
+    """See base class."""
+    with open(os.path.join(data_dir, 'section_vocab.txt'), 'rb') as ifp:
+      labels = []
+      for line in ifp:
+        line = line.strip()
+        if line:
+          labels.append(line)
+      return labels
+
 
   def _create_examples(self, lines, set_type):
     """Creates examples for the training and dev sets."""
@@ -862,6 +902,7 @@ def main(_):
     "mrpc": MrpcProcessor,
     "xnli": XnliProcessor,
     "socialhx": SocialHxProcessor,
+    "sectioncodes": SectionCodeProcessor,
   }
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
@@ -888,7 +929,7 @@ def main(_):
 
   processor = processors[task_name]()
 
-  label_list = processor.get_labels()
+  label_list = processor.get_labels(FLAGS.data_dir)
 
   tokenizer = tokenization.FullTokenizer(
       vocab_file=FLAGS.vocab_file,
