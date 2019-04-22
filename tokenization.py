@@ -44,13 +44,13 @@ def validate_case_matches_checkpoint(do_lower_case, init_checkpoint):
   model_name = m.group(1)
 
   lower_models = [
-      "uncased_L-24_H-1024_A-16", "uncased_L-12_H-768_A-12",
-      "multilingual_L-12_H-768_A-12", "chinese_L-12_H-768_A-12"
+    "uncased_L-24_H-1024_A-16", "uncased_L-12_H-768_A-12",
+    "multilingual_L-12_H-768_A-12", "chinese_L-12_H-768_A-12"
   ]
 
   cased_models = [
-      "cased_L-12_H-768_A-12", "cased_L-24_H-1024_A-16",
-      "multi_cased_L-12_H-768_A-12"
+    "cased_L-12_H-768_A-12", "cased_L-24_H-1024_A-16",
+    "multi_cased_L-12_H-768_A-12"
   ]
 
   is_bad_config = False
@@ -171,7 +171,8 @@ class FullTokenizer(object):
       for token in placeholders_vocab:
         assert token in self.vocab
 
-    self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case, placeholders=placeholders_vocab)
+    self.basic_tokenizer = BasicTokenizer(do_lower_case=do_lower_case,
+                                          placeholders=placeholders_vocab)
     self.wordpiece_tokenizer = WordpieceTokenizer(vocab=self.vocab)
 
   def tokenize(self, text):
@@ -199,7 +200,10 @@ class BasicTokenizer(object):
       do_lower_case: Whether to lower case the input.
     """
     self.do_lower_case = do_lower_case
-    self.placeholders = placeholders
+    if placeholders is None:
+      self.placeholders = set()
+    else:
+      self.placeholders = placeholders
 
   def tokenize(self, text):
     """Tokenizes a piece of text."""
@@ -217,13 +221,7 @@ class BasicTokenizer(object):
     orig_tokens = whitespace_tokenize(text)
     split_tokens = []
     for token in orig_tokens:
-      if self.placeholders is not None and token in self.placeholders:
-        split_tokens.append(token)
-      else:
-        if self.do_lower_case:
-          token = token.lower()
-          token = self._run_strip_accents(token)
-        split_tokens.extend(self._run_split_on_punc(token))
+      split_tokens.extend(self._run_split_on_punc(token))
 
     output_tokens = whitespace_tokenize(" ".join(split_tokens))
     return output_tokens
@@ -239,25 +237,58 @@ class BasicTokenizer(object):
       output.append(char)
     return "".join(output)
 
+  def _maybe_to_lower(self, text):
+    if not self.do_lower_case:
+      return text
+
+    return self._run_strip_accents(text.lower())
+
   def _run_split_on_punc(self, text):
     """Splits punctuation on a piece of text."""
-    chars = list(text)
-    i = 0
+    if text in self.placeholders:
+      return [text]
+
+    i = len(text)
     start_new_word = True
     output = []
-    while i < len(chars):
-      char = chars[i]
-      if _is_punctuation(char):
-        output.append([char])
-        start_new_word = True
-      else:
-        if start_new_word:
-          output.append([])
-        start_new_word = False
-        output[-1].append(char)
-      i += 1
+    end = i
 
-    return ["".join(x) for x in output]
+    while i > 0:
+      prefix = text[:i]
+      if prefix in self.placeholders:
+        output.insert(0, prefix)
+        break
+      elif _is_punctuation(text[i - 1]):
+        # create before after punct token
+        if i < end:
+          output.insert(0, self._maybe_to_lower(text[i: end]))
+        # create punct token
+        output.insert(0, self._maybe_to_lower(text[i - 1]))
+        end = i - 1
+
+      if i == 1 and end > 0:
+        output.insert(0, self._maybe_to_lower(text[: end]))
+        break
+      i -= 1
+
+    return output
+    # chars = list(text)
+    # i = 0
+    # start_new_word = True
+    # output = []
+    # while i < len(chars):
+    #   char = chars[i]
+    #   if _is_punctuation(char):
+    #     output.append([char])
+    #     start_new_word = True
+    #   else:
+    #     if start_new_word:
+    #       output.append([])
+    #     start_new_word = False
+    #     output[-1].append(char)
+    #   i += 1
+    #
+    # return ["".join(x) for x in output]
 
   def _tokenize_chinese_chars(self, text):
     """Adds whitespace around any CJK character."""
