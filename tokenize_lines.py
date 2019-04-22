@@ -91,7 +91,7 @@ def main(argv):
 
     with tf.gfile.GFile(file_path) as gfile:
       line = gfile.readline()
-      while line is not None:
+      while line:
         line = line.strip()
         tokens = tokenizer.tokenize(line)
 
