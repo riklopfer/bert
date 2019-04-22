@@ -45,7 +45,7 @@ def main(argv):
 
   parser.add_argument('--do_lower_case',
                       help='Lowercase input',
-                      action='store_true')
+                      type=bool, default=True)
 
   parser.add_argument('-o', '--out',
                       help='Write output to this directory. ',
