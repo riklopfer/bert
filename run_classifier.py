@@ -931,6 +931,7 @@ def main(_):
     "xnli": XnliProcessor,
     "socialhx": SocialHxProcessor,
     "sectioncodes": SectionCodeProcessor,
+    "wordsense": WordSenseProcessor,
   }
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
