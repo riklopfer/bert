@@ -81,55 +81,6 @@ flags.DEFINE_bool(
     "do_predict", False,
     "Whether to run the model in inference mode on the test set.")
 
-flags.DEFINE_integer("train_batch_size", 32, "Total batch size for training.")
-
-flags.DEFINE_integer("eval_batch_size", 8, "Total batch size for eval.")
-
-flags.DEFINE_integer("predict_batch_size", 8, "Total batch size for predict.")
-
-flags.DEFINE_float("learning_rate", 5e-5, "The initial learning rate for Adam.")
-
-flags.DEFINE_float("num_train_epochs", 3.0,
-                   "Total number of training epochs to perform.")
-
-flags.DEFINE_float(
-    "warmup_proportion", 0.1,
-    "Proportion of training to perform linear learning rate warmup for. "
-    "E.g., 0.1 = 10% of training.")
-
-flags.DEFINE_integer("save_checkpoints_steps", 1000,
-                     "How often to save the model checkpoint.")
-
-flags.DEFINE_integer("iterations_per_loop", 1000,
-                     "How many steps to make in each estimator call.")
-
-flags.DEFINE_bool("use_tpu", False, "Whether to use TPU or GPU/CPU.")
-
-tf.flags.DEFINE_string(
-    "tpu_name", None,
-    "The Cloud TPU to use for training. This should be either the name "
-    "used when creating the Cloud TPU, or a grpc://ip.address.of.tpu:8470 "
-    "url.")
-
-tf.flags.DEFINE_string(
-    "tpu_zone", None,
-    "[Optional] GCE zone where the Cloud TPU is located in. If not "
-    "specified, we will attempt to automatically detect the GCE project from "
-    "metadata.")
-
-tf.flags.DEFINE_string(
-    "gcp_project", None,
-    "[Optional] Project name for the Cloud TPU-enabled project. If not "
-    "specified, we will attempt to automatically detect the GCE project from "
-    "metadata.")
-
-tf.flags.DEFINE_string("master", None, "[Optional] TensorFlow master URL.")
-
-flags.DEFINE_integer(
-    "num_tpu_cores", 8,
-    "Only used if `use_tpu` is True. Total number of TPU cores to use.")
-
-
 class InputExample(object):
   """A single training/test example for simple sequence classification."""
 
@@ -976,52 +927,11 @@ def main(_):
       do_lower_case=FLAGS.do_lower_case,
       placeholders_file=FLAGS.placeholders_file)
 
-  tpu_cluster_resolver = None
-  if FLAGS.use_tpu and FLAGS.tpu_name:
-    tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
-        FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
-
-  is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-  run_config = tf.contrib.tpu.RunConfig(
-      cluster=tpu_cluster_resolver,
-      master=FLAGS.master,
-      model_dir=FLAGS.output_dir,
-      save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-      tpu_config=tf.contrib.tpu.TPUConfig(
-          iterations_per_loop=FLAGS.iterations_per_loop,
-          num_shards=FLAGS.num_tpu_cores,
-          per_host_input_for_training=is_per_host))
 
   train_examples = None
-  num_train_steps = None
-  num_warmup_steps = None
+
   if FLAGS.do_train:
     train_examples = processor.get_train_examples(FLAGS.data_dir)
-    num_train_steps = int(
-        len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
-    num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
-
-  model_fn = model_fn_builder(
-      bert_config=bert_config,
-      num_labels=len(label_list),
-      init_checkpoint=FLAGS.init_checkpoint,
-      learning_rate=FLAGS.learning_rate,
-      num_train_steps=num_train_steps,
-      num_warmup_steps=num_warmup_steps,
-      use_tpu=FLAGS.use_tpu,
-      use_one_hot_embeddings=FLAGS.use_tpu)
-
-  # If TPU is not available, this will fall back to normal Estimator on CPU
-  # or GPU.
-  estimator = tf.contrib.tpu.TPUEstimator(
-      use_tpu=FLAGS.use_tpu,
-      model_fn=model_fn,
-      config=run_config,
-      train_batch_size=FLAGS.train_batch_size,
-      eval_batch_size=FLAGS.eval_batch_size,
-      predict_batch_size=FLAGS.predict_batch_size)
-
-  if FLAGS.do_train:
     train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
     if os.path.exists(train_file):
       tf.logging.info("train file (%s) already exists -- no overwriting.",
@@ -1030,16 +940,6 @@ def main(_):
       file_based_convert_examples_to_features(
           train_examples, label_list, FLAGS.max_seq_length, tokenizer,
           train_file)
-    tf.logging.info("***** Running training *****")
-    tf.logging.info("  Num examples = %d", len(train_examples))
-    tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
-    tf.logging.info("  Num steps = %d", num_train_steps)
-    train_input_fn = file_based_input_fn_builder(
-        input_file=train_file,
-        seq_length=FLAGS.max_seq_length,
-        is_training=True,
-        drop_remainder=True)
-    estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
   if FLAGS.do_eval:
     eval_examples = processor.get_dev_examples(FLAGS.data_dir)
@@ -1061,70 +961,6 @@ def main(_):
       file_based_convert_examples_to_features(
           eval_examples, label_list, FLAGS.max_seq_length, tokenizer, eval_file)
 
-    tf.logging.info("***** Running evaluation *****")
-    tf.logging.info("  Num examples = %d (%d actual, %d padding)",
-                    len(eval_examples), num_actual_eval_examples,
-                    len(eval_examples) - num_actual_eval_examples)
-    tf.logging.info("  Batch size = %d", FLAGS.eval_batch_size)
-
-    # This tells the estimator to run through the entire set.
-    eval_steps = None
-    # However, if running eval on the TPU, you will need to specify the
-    # number of steps.
-    if FLAGS.use_tpu:
-      assert len(eval_examples) % FLAGS.eval_batch_size == 0
-      eval_steps = int(len(eval_examples) // FLAGS.eval_batch_size)
-
-    eval_drop_remainder = True if FLAGS.use_tpu else False
-    eval_input_fn = file_based_input_fn_builder(
-        input_file=eval_file,
-        seq_length=FLAGS.max_seq_length,
-        is_training=False,
-        drop_remainder=eval_drop_remainder)
-
-    result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
-
-    # Compute F1
-    for label_id in range(len(label_list)):
-      precision = result.get("{}_Precision".format(label_id))
-      recall = result.get("{}_Recall".format(label_id))
-      if precision is None or recall is None:
-        continue
-      if precision == 0 or recall == 0:
-        result["{}_F1".format(label_id)] = 0.
-      else:
-        result["{}_F1".format(label_id)] = 2 * precision * recall / (precision + recall)
-
-    # Compute average F1
-    exclude_ids = set()
-    if processor.get_negative_label() is not None:
-      exclude_ids.add(label_list.index(processor.get_negative_label()))
-
-    total_f1 = 0.
-    # Exclude the last one -- assume that the last one is the NO_LABEL class
-    for label_id in range(len(label_list)):
-      if label_id not in exclude_ids:
-        total_f1 += result["{}_F1".format(label_id)]
-      else:
-        tf.logging.info("Excluding F1 for '%s' from Average F1", label_list[label_id])
-
-    # Cannot use '_' or else 'Average' will be treated as int
-    result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
-
-    output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
-    with tf.gfile.GFile(output_eval_file, "w") as writer:
-      tf.logging.info("***** Eval results *****")
-      for key in sorted(result.keys()):
-        value = result[key]
-
-        if key.endswith("_Precision") or key.endswith("_Recall") or key.endswith("_F1"):
-          label_id, metric_name = key.rsplit("_", 1)
-          key = "{} {}".format(label_list[int(label_id)], metric_name)
-          value = "{:.3%}".format(value)
-
-        tf.logging.info("  %s = %s", key, str(value))
-        writer.write("%s = %s\n" % (key, str(value)))
-
   if FLAGS.do_predict:
     predict_examples = processor.get_test_examples(FLAGS.data_dir)
     num_actual_predict_examples = len(predict_examples)
@@ -1144,79 +980,6 @@ def main(_):
       file_based_convert_examples_to_features(predict_examples, label_list,
                                               FLAGS.max_seq_length, tokenizer,
                                               predict_file)
-
-    tf.logging.info("***** Running prediction*****")
-    tf.logging.info("  Num examples = %d (%d actual, %d padding)",
-                    len(predict_examples), num_actual_predict_examples,
-                    len(predict_examples) - num_actual_predict_examples)
-    tf.logging.info("  Batch size = %d", FLAGS.predict_batch_size)
-
-    predict_drop_remainder = True if FLAGS.use_tpu else False
-    predict_input_fn = file_based_input_fn_builder(
-        input_file=predict_file,
-        seq_length=FLAGS.max_seq_length,
-        is_training=False,
-        drop_remainder=predict_drop_remainder)
-
-    result = estimator.predict(input_fn=predict_input_fn)
-
-    # Write predictions and text
-    predictions_file = os.path.join(FLAGS.output_dir, "predictions.tsv")
-    with tf.gfile.GFile(predictions_file, "w") as writer:
-      num_written_lines = 0
-      tf.logging.info("***** Predict results *****")
-      if predict_examples[0].text_b is None:
-        tsv_header = ("TextA", "Actual", "Predicted", "Probability")
-      else:
-        tsv_header = ("TextA", "TextB", "Actual", "Predicted", "Probability")
-
-      writer.write("\t".join(tsv_header) + "\n")
-      for (i, prediction) in enumerate(result):
-        if i % (num_actual_predict_examples // 10) == 0:
-          tf.logging.info("Processing %d/%d", i, num_actual_predict_examples)
-
-        if i >= num_actual_predict_examples:
-          break
-
-        probabilities = prediction["probabilities"]
-
-        # text elements
-        tsv_elements = [predict_examples[i].text_a]
-        if predict_examples[i].text_b is not None:
-          tsv_elements.append(predict_examples[i].text_b)
-
-        # predicted label
-        predicted_idx = np.argmax(probabilities)
-        predicted_label = label_list[predicted_idx]
-        tsv_elements.append(predicted_label)
-
-        # Actual label
-        tsv_elements.append(predict_examples[i].label)
-
-        # Predicted probability
-        tsv_elements.append(str(probabilities[predicted_idx]))
-
-        output_line = "\t".join(tsv_elements) + "\n"
-        writer.write(output_line)
-        num_written_lines += 1
-    assert num_written_lines == num_actual_predict_examples
-
-    # # Write raw probabilities
-    # output_predict_file = os.path.join(FLAGS.output_dir, "test_results.tsv")
-    # with tf.gfile.GFile(output_predict_file, "w") as writer:
-    #   num_written_lines = 0
-    #   tf.logging.info("***** Predict results *****")
-    #   for (i, prediction) in enumerate(result):
-    #     probabilities = prediction["probabilities"]
-    #     if i >= num_actual_predict_examples:
-    #       break
-    #     output_line = "\t".join(
-    #         str(class_probability)
-    #         for class_probability in probabilities) + "\n"
-    #     writer.write(output_line)
-    #     num_written_lines += 1
-    # assert num_written_lines == num_actual_predict_examples
-
 
 if __name__ == "__main__":
   flags.mark_flag_as_required("data_dir")
