@@ -1102,10 +1102,6 @@ def main(_):
       false_pos = result["{}_FP".format(label_id)]
       false_neg = result["{}_FN".format(label_id)]
 
-      if not all((true_pos, false_pos, false_neg)):
-        tf.logging.error("missing metric for %s", label)
-        continue
-
       # Exclude negative label from overall metric
       if label_id in exclude_ids:
         tf.logging.info("Excluding '%s' from metrics", label)
