@@ -1095,14 +1095,14 @@ def main(_):
       exclude_ids.add(label_list.index(processor.get_negative_label()))
 
     total_tp, total_fp, total_fn = 0., 0., 0.
-    for label_id in range(len(label_list)):
-
+    for label_id, label in enumerate(label_list):
+      # use the label id here
       true_pos = result["{}_TP".format(label_id)]
       false_pos = result["{}_FP".format(label_id)]
       false_neg = result["{}_FN".format(label_id)]
 
       if not all((true_pos, false_pos, false_neg)):
-        tf.logging.error("missing metric for %s", label_list[label_id])
+        tf.logging.error("missing metric for %s", label)
         continue
 
       # Exclude negative label from overall metric
@@ -1112,16 +1112,16 @@ def main(_):
         total_fn += false_neg
 
       if true_pos == 0:
-        result["{}_Precision".format(label_id)] = 0.
-        result["{}_Recall".format(label_id)] = 0.
-        result["{}_F1".format(label_id)] = 0.
+        result["{} Precision".format(label_id)] = 0.
+        result["{} Recall".format(label_id)] = 0.
+        result["{} F1".format(label_id)] = 0.
       else:
         precision = true_pos / (true_pos + false_pos)
         recall = true_pos / (true_pos + false_neg)
         f1 = 2 * precision * recall / (precision + recall)
-        result["{}_Precision".format(label_id)] = precision
-        result["{}_Recall".format(label_id)] = recall
-        result["{}_F1".format(label_id)] = f1
+        result["{} Precision".format(label_id)] = "{:.3%}".format(precision)
+        result["{} Recall".format(label_id)] = "{:.3%}".format(recall)
+        result["{} F1".format(label_id)] = "{:.3%}".format(f1)
 
     # Compute Overall F1
     if total_tp == 0:
@@ -1131,9 +1131,10 @@ def main(_):
     else:
       precision = total_tp / (total_tp + total_fn)
       recall = total_tp / (total_tp + total_fp)
-      result["Overall Precision"] = precision
-      result["Overall Recall"] = recall
-      result["Overall F1"] = 2 * precision * recall / (precision + recall)
+      f1 = 2 * precision * recall / (precision + recall)
+      result["Overall Precision"] = "{:.3%}".format(precision)
+      result["Overall Recall"] = "{:.3%}".format(recall)
+      result["Overall F1"] = "{:.3%}".format(f1)
 
     total_f1 = 0.
     # Exclude the last one -- assume that the last one is the NO_LABEL class
@@ -1153,11 +1154,11 @@ def main(_):
       for key in sorted(result.keys()):
         value = result[key]
 
-        if key.endswith("_Precision") or key.endswith(
-            "_Recall") or key.endswith("_F1"):
+        if key.endswith("_TP") or key.endswith(
+            "_FP") or key.endswith("_FN"):
           label_id, metric_name = key.rsplit("_", 1)
           key = "{} {}".format(label_list[int(label_id)], metric_name)
-          value = "{:.3%}".format(value)
+          # value = "{:.3%}".format(value)
 
         tf.logging.info("  %s = %s", key, str(value))
         writer.write("%s = %s\n" % (key, str(value)))
