@@ -1116,16 +1116,17 @@ def main(_):
       total_fn += false_neg
 
       if true_pos == 0:
-        result["{} Precision".format(label_id)] = 0.
-        result["{} Recall".format(label_id)] = 0.
-        result["{} F1".format(label_id)] = 0.
+        result["{} Precision".format(label)] = 0.
+        result["{} Recall".format(label)] = 0.
+        result["{} F1".format(label)] = 0.
       else:
         precision = true_pos / (true_pos + false_pos)
         recall = true_pos / (true_pos + false_neg)
         f1 = 2 * precision * recall / (precision + recall)
-        result["{} Precision".format(label_id)] = "{:.3%}".format(precision)
-        result["{} Recall".format(label_id)] = "{:.3%}".format(recall)
-        result["{} F1".format(label_id)] = "{:.3%}".format(f1)
+        total_f1 += f1
+        result["{} Precision".format(label)] = "{:.3%}".format(precision)
+        result["{} Recall".format(label)] = "{:.3%}".format(recall)
+        result["{} F1".format(label)] = "{:.3%}".format(f1)
 
     # Compute Overall F1
     if total_tp == 0:
@@ -1136,7 +1137,6 @@ def main(_):
       precision = total_tp / (total_tp + total_fn)
       recall = total_tp / (total_tp + total_fp)
       f1 = 2 * precision * recall / (precision + recall)
-      total_f1 += f1
       result["Overall Precision"] = "{:.3%}".format(precision)
       result["Overall Recall"] = "{:.3%}".format(recall)
       result["Overall F1"] = "{:.3%}".format(f1)
