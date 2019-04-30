@@ -428,6 +428,7 @@ class SocialHxProcessor(DataProcessor):
           InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
     return examples
 
+
 class SectionCodeProcessor(DataProcessor):
   """Processor for the CoLA data set (GLUE version)."""
 
@@ -467,6 +468,7 @@ class SectionCodeProcessor(DataProcessor):
           InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
     return examples
 
+
 class WordSenseProcessor(DataProcessor):
   """Processor for the CoLA data set (GLUE version)."""
 
@@ -494,7 +496,6 @@ class WordSenseProcessor(DataProcessor):
         if line:
           labels.append(line)
       return labels
-
 
   def _create_examples(self, lines, set_type):
     """Creates examples for the training and dev sets."""
@@ -819,13 +820,17 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
       def metric_fn(per_example_loss, label_ids, logits, is_real_example):
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
 
-        def precision_for_label(label_id):
-          return tf.metrics.precision(tf.equal(label_ids, label_id),
-                                      tf.equal(predictions, label_id))
+        def tp_for_label(label_id):
+          return tf.metrics.true_positives(tf.equal(label_ids, label_id),
+                                           tf.equal(predictions, label_id))
 
-        def recall_for_label(label_id):
-          return tf.metrics.recall(tf.equal(label_ids, label_id),
-                                   tf.equal(predictions, label_id))
+        def fp_for_label(label_id):
+          return tf.metrics.false_positives(tf.equal(label_ids, label_id),
+                                            tf.equal(predictions, label_id))
+
+        def fn_for_label(label_id):
+          return tf.metrics.false_negatives(tf.equal(label_ids, label_id),
+                                            tf.equal(predictions, label_id))
 
         accuracy = tf.metrics.accuracy(
             labels=label_ids, predictions=predictions, weights=is_real_example)
@@ -837,9 +842,9 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         # Add per-class precision and recall
         for label_id in range(num_labels):
-          metrics["{}_Precision".format(label_id)] = precision_for_label(
-              label_id)
-          metrics["{}_Recall".format(label_id)] = recall_for_label(label_id)
+          metrics["{}_TP".format(label_id)] = tp_for_label(label_id)
+          metrics["{}_FP".format(label_id)] = fp_for_label(label_id)
+          metrics["{}_FN".format(label_id)] = fn_for_label(label_id)
 
         return metrics
 
@@ -1084,21 +1089,51 @@ def main(_):
 
     result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
 
-    # Compute F1
-    for label_id in range(len(label_list)):
-      precision = result.get("{}_Precision".format(label_id))
-      recall = result.get("{}_Recall".format(label_id))
-      if precision is None or recall is None:
-        continue
-      if precision == 0 or recall == 0:
-        result["{}_F1".format(label_id)] = 0.
-      else:
-        result["{}_F1".format(label_id)] = 2 * precision * recall / (precision + recall)
-
-    # Compute average F1
+    # Compute Precision, Recall, and F1
     exclude_ids = set()
     if processor.get_negative_label() is not None:
       exclude_ids.add(label_list.index(processor.get_negative_label()))
+
+    total_tp, total_fp, total_fn = 0., 0., 0.
+    for label_id in range(len(label_list)):
+
+      true_pos = result["{}_TP".format(label_id)]
+      false_pos = result["{}_FP".format(label_id)]
+      false_neg = result["{}_FN".format(label_id)]
+
+      if not all((true_pos, false_pos, false_neg)):
+        tf.logging.error("missing metric for %s", label_list[label_id])
+        continue
+
+      # Exclude negative label from overall metric
+      if label_id not in exclude_ids:
+        total_tp += true_pos
+        total_fp += false_pos
+        total_fn += false_neg
+
+      if true_pos == 0:
+        result["{}_Precision".format(label_id)] = 0.
+        result["{}_Recall".format(label_id)] = 0.
+        result["{}_F1".format(label_id)] = 0.
+      else:
+        precision = true_pos / (true_pos + false_pos)
+        recall = true_pos / (true_pos + false_neg)
+        f1 = 2 * precision * recall / (precision + recall)
+        result["{}_Precision".format(label_id)] = precision
+        result["{}_Recall".format(label_id)] = recall
+        result["{}_F1".format(label_id)] = f1
+
+    # Compute Overall F1
+    if total_tp == 0:
+      result["Overall Precision"] = 0.
+      result["Overall Recall"] = 0.
+      result["Overall F1"] = 0.
+    else:
+      precision = total_tp / (total_tp + total_fn)
+      recall = total_tp / (total_tp + total_fp)
+      result["Overall Precision"] = precision
+      result["Overall Recall"] = recall
+      result["Overall F1"] = 2 * precision * recall / (precision + recall)
 
     total_f1 = 0.
     # Exclude the last one -- assume that the last one is the NO_LABEL class
@@ -1106,7 +1141,8 @@ def main(_):
       if label_id not in exclude_ids:
         total_f1 += result["{}_F1".format(label_id)]
       else:
-        tf.logging.info("Excluding F1 for '%s' from Average F1", label_list[label_id])
+        tf.logging.info("Excluding F1 for '%s' from Average F1",
+                        label_list[label_id])
 
     # Cannot use '_' or else 'Average' will be treated as int
     result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
@@ -1117,7 +1153,8 @@ def main(_):
       for key in sorted(result.keys()):
         value = result[key]
 
-        if key.endswith("_Precision") or key.endswith("_Recall") or key.endswith("_F1"):
+        if key.endswith("_Precision") or key.endswith(
+            "_Recall") or key.endswith("_F1"):
           label_id, metric_name = key.rsplit("_", 1)
           key = "{} {}".format(label_list[int(label_id)], metric_name)
           value = "{:.3%}".format(value)
