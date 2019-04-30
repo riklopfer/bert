@@ -1112,9 +1112,9 @@ def main(_):
       total_fn += false_neg
 
       if true_pos == 0:
-        result["{} Precision".format(label)] = 0.
-        result["{} Recall".format(label)] = 0.
-        result["{} F1".format(label)] = 0.
+        result["{} Precision".format(label)] = "{:.3%}".format(0)
+        result["{} Recall".format(label)] = "{:.3%}".format(0)
+        result["{} F1".format(label)] = "{:.3%}".format(0)
       else:
         precision = true_pos / (true_pos + false_pos)
         recall = true_pos / (true_pos + false_neg)
@@ -1126,9 +1126,9 @@ def main(_):
 
     # Compute Overall F1
     if total_tp == 0:
-      result["Overall Precision"] = 0.
-      result["Overall Recall"] = 0.
-      result["Overall F1"] = 0.
+      result["Overall Precision"] = "{:.3%}".format(0)
+      result["Overall Recall"] = "{:.3%}".format(0)
+      result["Overall F1"] = "{:.3%}".format(0)
     else:
       precision = total_tp / (total_tp + total_fn)
       recall = total_tp / (total_tp + total_fp)
