@@ -1095,6 +1095,7 @@ def main(_):
       exclude_ids.add(label_list.index(processor.get_negative_label()))
 
     total_tp, total_fp, total_fn = 0., 0., 0.
+    total_f1 = 0.
     for label_id, label in enumerate(label_list):
       # use the label id here
       true_pos = result["{}_TP".format(label_id)]
@@ -1106,10 +1107,13 @@ def main(_):
         continue
 
       # Exclude negative label from overall metric
-      if label_id not in exclude_ids:
-        total_tp += true_pos
-        total_fp += false_pos
-        total_fn += false_neg
+      if label_id in exclude_ids:
+        tf.logging.info("Excluding '%s' from metrics", label)
+        continue
+
+      total_tp += true_pos
+      total_fp += false_pos
+      total_fn += false_neg
 
       if true_pos == 0:
         result["{} Precision".format(label_id)] = 0.
@@ -1132,18 +1136,10 @@ def main(_):
       precision = total_tp / (total_tp + total_fn)
       recall = total_tp / (total_tp + total_fp)
       f1 = 2 * precision * recall / (precision + recall)
+      total_f1 += f1
       result["Overall Precision"] = "{:.3%}".format(precision)
       result["Overall Recall"] = "{:.3%}".format(recall)
       result["Overall F1"] = "{:.3%}".format(f1)
-
-    total_f1 = 0.
-    # Exclude the last one -- assume that the last one is the NO_LABEL class
-    for label_id in range(len(label_list)):
-      if label_id not in exclude_ids:
-        total_f1 += result["{}_F1".format(label_id)]
-      else:
-        tf.logging.info("Excluding F1 for '%s' from Average F1",
-                        label_list[label_id])
 
     # Cannot use '_' or else 'Average' will be treated as int
     result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
