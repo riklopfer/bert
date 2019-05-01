@@ -502,10 +502,18 @@ class WordSenseProcessor(DataProcessor):
     examples = []
     for (i, line) in enumerate(filter(None, lines)):
       guid = "%s-%s" % (set_type, i)
-      text_a = tokenization.convert_to_unicode(line[0])
-      label = tokenization.convert_to_unicode(line[1])
+      left_context = tokenization.convert_to_unicode(line[0])
+      target = tokenization.convert_to_unicode(line[1])
+      right_context = tokenization.convert_to_unicode(line[2])
+      label = tokenization.convert_to_unicode(line[2])
+
+      context = u" ".join((left_context, right_context))
+      # this will happen if context is not included
+      if not context.strip():
+        context = None
+
       examples.append(
-          InputExample(guid=guid, text_a=text_a, text_b=None, label=label))
+          InputExample(guid=guid, text_a=target, text_b=context, label=label))
     return examples
 
 
