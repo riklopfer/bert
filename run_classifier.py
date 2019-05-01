@@ -505,7 +505,7 @@ class WordSenseProcessor(DataProcessor):
       left_context = tokenization.convert_to_unicode(line[0])
       target = tokenization.convert_to_unicode(line[1])
       right_context = tokenization.convert_to_unicode(line[2])
-      label = tokenization.convert_to_unicode(line[2])
+      label = tokenization.convert_to_unicode(line[3])
 
       context = u" ".join((left_context, right_context))
       # this will happen if context is not included
