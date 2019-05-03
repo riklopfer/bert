@@ -40,6 +40,10 @@ flags.DEFINE_string(
     "for the task.")
 
 flags.DEFINE_string(
+    "records_dir", None,
+    "TF Records will be written and read from this directory. ")
+
+flags.DEFINE_string(
     "bert_config_file", None,
     "The config json file corresponding to the pre-trained BERT model. "
     "This specifies the model architecture.")
@@ -1052,7 +1056,7 @@ def main(_):
       predict_batch_size=FLAGS.predict_batch_size)
 
   if FLAGS.do_train:
-    train_file = os.path.join(FLAGS.output_dir, "train.tf_record")
+    train_file = os.path.join(FLAGS.records_dir, "train.tf_record")
     if os.path.exists(train_file):
       tf.logging.info("train file (%s) already exists -- no overwriting.",
                       train_file)
@@ -1083,7 +1087,7 @@ def main(_):
       while len(eval_examples) % FLAGS.eval_batch_size != 0:
         eval_examples.append(PaddingInputExample())
 
-    eval_file = os.path.join(FLAGS.output_dir, "eval.tf_record")
+    eval_file = os.path.join(FLAGS.records_dir, "eval.tf_record")
     if os.path.exists(eval_file):
       tf.logging.info("eval file (%s) already exists -- not overwriting",
                       eval_file)
@@ -1191,7 +1195,7 @@ def main(_):
       while len(predict_examples) % FLAGS.predict_batch_size != 0:
         predict_examples.append(PaddingInputExample())
 
-    predict_file = os.path.join(FLAGS.output_dir, "predict.tf_record")
+    predict_file = os.path.join(FLAGS.records_dir, "predict.tf_record")
     if os.path.exists(predict_file):
       tf.logging.info("predict file (%s) already exists -- not overwriting",
                       predict_file)
@@ -1275,6 +1279,7 @@ def main(_):
 
 if __name__ == "__main__":
   flags.mark_flag_as_required("data_dir")
+  flags.mark_flag_as_required("records_dir")
   flags.mark_flag_as_required("task_name")
   flags.mark_flag_as_required("vocab_file")
   flags.mark_flag_as_required("bert_config_file")
