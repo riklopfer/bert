@@ -1072,6 +1072,10 @@ def main(_):
       model_checkpoints = ckpt.all_model_checkpoint_paths
 
   for init_checkpoint in model_checkpoints:
+    tf.logging.info("\n\n"
+                    "********************\n"
+                    "Initial Checkpoint: %s\n"
+                    "\n", init_checkpoint)
     model_fn = model_fn_builder(
         bert_config=bert_config,
         num_labels=len(label_list),
