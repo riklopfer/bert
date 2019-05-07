@@ -1034,26 +1034,32 @@ def main(_):
     tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
         FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
 
-  is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
-  run_config = tf.contrib.tpu.RunConfig(
-      cluster=tpu_cluster_resolver,
-      master=FLAGS.master,
-      model_dir=FLAGS.output_dir,
-      save_checkpoints_steps=FLAGS.save_checkpoints_steps,
-      keep_checkpoint_max=1,
-      tpu_config=tf.contrib.tpu.TPUConfig(
-          iterations_per_loop=FLAGS.iterations_per_loop,
-          num_shards=FLAGS.num_tpu_cores,
-          per_host_input_for_training=is_per_host))
+  # use this by default, but over-ride if we are training. Save once per epoch
+  save_checkpoint_steps = FLAGS.save_checkpoints_steps
 
   train_examples = None
   num_train_steps = None
   num_warmup_steps = None
   if FLAGS.do_train:
     train_examples = processor.get_train_examples(FLAGS.data_dir)
-    num_train_steps = int(
-        len(train_examples) / FLAGS.train_batch_size * FLAGS.num_train_epochs)
+    steps_per_epoch = len(train_examples) // FLAGS.train_batch_size
+    num_train_steps = steps_per_epoch * FLAGS.num_train_epochs
+    save_checkpoint_steps = steps_per_epoch
+    tf.logging.info("Saving check point every %d/%d steps",
+                    steps_per_epoch, num_train_steps)
     num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
+
+  is_per_host = tf.contrib.tpu.InputPipelineConfig.PER_HOST_V2
+  run_config = tf.contrib.tpu.RunConfig(
+      cluster=tpu_cluster_resolver,
+      master=FLAGS.master,
+      model_dir=FLAGS.output_dir,
+      save_checkpoints_steps=save_checkpoint_steps,
+      keep_checkpoint_max=0,
+      tpu_config=tf.contrib.tpu.TPUConfig(
+          iterations_per_loop=FLAGS.iterations_per_loop,
+          num_shards=FLAGS.num_tpu_cores,
+          per_host_input_for_training=is_per_host))
 
   model_fn = model_fn_builder(
       bert_config=bert_config,
