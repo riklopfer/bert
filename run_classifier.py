@@ -1075,7 +1075,7 @@ def main(_):
     tf.logging.info("\n\n"
                     "********************\n"
                     "Initial Checkpoint: %s\n"
-                    "\n", init_checkpoint)
+                    "********************\n", init_checkpoint)
     model_fn = model_fn_builder(
         bert_config=bert_config,
         num_labels=len(label_list),
