@@ -1216,7 +1216,7 @@ def main(_):
       result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
 
       output_eval_file = os.path.join(FLAGS.output_dir,
-                                      "eval_{}_results.txt".format(epoch_n))
+                                      "eval_results_{}.txt".format(epoch_n))
       with tf.gfile.GFile(output_eval_file, "w") as writer:
         tf.logging.info("***** Eval results for epoch %d *****", epoch_n)
         for key in sorted(result.keys()):
