@@ -847,7 +847,7 @@ def model_fn_builder(bert_config, num_labels, negative_label_idx,
     elif mode == tf.estimator.ModeKeys.EVAL:
 
       if negative_label_idx is not None:
-        neg_label_mask = tf.cast(tf.equal(label_ids, negative_label_idx),
+        neg_label_mask = tf.cast(tf.not_equal(label_ids, negative_label_idx),
                                  dtype=tf.float32)
         is_real_and_positive = tf.multiply(is_real_example, neg_label_mask)
 
