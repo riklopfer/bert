@@ -850,15 +850,18 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
 
         def tp_for_label(label_id):
           return tf.metrics.true_positives(tf.equal(label_ids, label_id),
-                                           tf.equal(predictions, label_id))
+                                           tf.equal(predictions, label_id),
+                                           weights=is_real_example)
 
         def fp_for_label(label_id):
           return tf.metrics.false_positives(tf.equal(label_ids, label_id),
-                                            tf.equal(predictions, label_id))
+                                            tf.equal(predictions, label_id),
+                                           weights=is_real_example)
 
         def fn_for_label(label_id):
           return tf.metrics.false_negatives(tf.equal(label_ids, label_id),
-                                            tf.equal(predictions, label_id))
+                                            tf.equal(predictions, label_id),
+                                           weights=is_real_example)
 
         accuracy = tf.metrics.accuracy(
             labels=label_ids, predictions=predictions, weights=is_real_example)
