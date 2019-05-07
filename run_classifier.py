@@ -779,9 +779,10 @@ def create_model(bert_config, is_training, input_ids, input_mask, segment_ids,
     return (loss, per_example_loss, logits, probabilities)
 
 
-def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
-    num_train_steps, num_warmup_steps, use_tpu,
-    use_one_hot_embeddings):
+def model_fn_builder(bert_config, num_labels, negative_label_idx,
+    init_checkpoint, learning_rate,
+    num_train_steps, num_warmup_steps,
+    use_tpu, use_one_hot_embeddings):
   """Returns `model_fn` closure for TPUEstimator."""
 
   def model_fn(features, labels, mode,
@@ -845,6 +846,11 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
           scaffold_fn=scaffold_fn)
     elif mode == tf.estimator.ModeKeys.EVAL:
 
+      if negative_label_idx is not None:
+        neg_label_mask = tf.cast(tf.equal(label_ids, negative_label_idx),
+                                 dtype=tf.float32)
+        is_real_and_positive = tf.multiply(is_real_example, neg_label_mask)
+
       def metric_fn(per_example_loss, label_ids, logits, is_real_example):
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
 
@@ -856,15 +862,17 @@ def model_fn_builder(bert_config, num_labels, init_checkpoint, learning_rate,
         def fp_for_label(label_id):
           return tf.metrics.false_positives(tf.equal(label_ids, label_id),
                                             tf.equal(predictions, label_id),
-                                           weights=is_real_example)
+                                            weights=is_real_example)
 
         def fn_for_label(label_id):
           return tf.metrics.false_negatives(tf.equal(label_ids, label_id),
                                             tf.equal(predictions, label_id),
-                                           weights=is_real_example)
+                                            weights=is_real_example)
 
         accuracy = tf.metrics.accuracy(
-            labels=label_ids, predictions=predictions, weights=is_real_example)
+            labels=label_ids, predictions=predictions,
+            weights=is_real_and_positive)
+
         loss = tf.metrics.mean(values=per_example_loss, weights=is_real_example)
         metrics = {
           "eval_accuracy": accuracy,
@@ -1041,6 +1049,7 @@ def main(_):
   model_fn = model_fn_builder(
       bert_config=bert_config,
       num_labels=len(label_list),
+      negative_label_idx=processor.get_negative_label(),
       init_checkpoint=FLAGS.init_checkpoint,
       learning_rate=FLAGS.learning_rate,
       num_train_steps=num_train_steps,
