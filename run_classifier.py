@@ -873,9 +873,15 @@ def model_fn_builder(bert_config, num_labels, negative_label_idx,
             labels=label_ids, predictions=predictions,
             weights=is_real_and_positive)
 
+        per_class_accuracy = tf.metrics.mean_per_class_accuracy(
+            labels=label_ids, predictions=predictions,
+            num_classes=num_labels,
+            weights=is_real_and_positive)
+
         loss = tf.metrics.mean(values=per_example_loss, weights=is_real_example)
         metrics = {
           "eval_accuracy": accuracy,
+          "per_class_accuracy": per_class_accuracy,
           "eval_loss": loss,
         }
 
