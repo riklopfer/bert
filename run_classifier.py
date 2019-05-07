@@ -1071,11 +1071,14 @@ def main(_):
       ckpt = tf.train.get_checkpoint_state(FLAGS.init_checkpoint)
       model_checkpoints = ckpt.all_model_checkpoint_paths
 
-  for init_checkpoint in model_checkpoints:
+  for epoch_n, init_checkpoint in enumerate(model_checkpoints):
     tf.logging.info("\n\n"
                     "********************\n"
+                    "Epoch N: %d\n"
                     "Initial Checkpoint: %s\n"
-                    "********************\n", init_checkpoint)
+                    "********************\n",
+                    epoch_n, init_checkpoint)
+
     model_fn = model_fn_builder(
         bert_config=bert_config,
         num_labels=len(label_list),
@@ -1212,9 +1215,10 @@ def main(_):
       # Cannot use '_' or else 'Average' will be treated as int
       result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
 
-      output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
+      output_eval_file = os.path.join(FLAGS.output_dir,
+                                      "eval_{}_results.txt".format(epoch_n))
       with tf.gfile.GFile(output_eval_file, "w") as writer:
-        tf.logging.info("***** Eval results *****")
+        tf.logging.info("***** Eval results for epoch %d *****", epoch_n)
         for key in sorted(result.keys()):
           value = result[key]
 
