@@ -850,6 +850,8 @@ def model_fn_builder(bert_config, num_labels, negative_label_idx,
         neg_label_mask = tf.cast(tf.not_equal(label_ids, negative_label_idx),
                                  dtype=tf.float32)
         is_real_and_positive = tf.multiply(is_real_example, neg_label_mask)
+      else:
+        is_real_and_positive = is_real_example
 
       def metric_fn(per_example_loss, label_ids, logits, is_real_example):
         predictions = tf.argmax(logits, axis=-1, output_type=tf.int32)
