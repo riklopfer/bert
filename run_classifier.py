@@ -1047,7 +1047,7 @@ def main(_):
     steps_per_epoch = len(train_examples) // FLAGS.train_batch_size
     num_train_steps = steps_per_epoch * FLAGS.num_train_epochs
     save_checkpoint_steps = steps_per_epoch
-    tf.logging.info("Saving check point every %d/%d steps",
+    tf.logging.info("Saving checkpoint every %d/%d steps",
                     steps_per_epoch, num_train_steps)
     num_warmup_steps = int(num_train_steps * FLAGS.warmup_proportion)
 
@@ -1204,8 +1204,7 @@ def main(_):
       for key in sorted(result.keys()):
         value = result[key]
 
-        if key.endswith("_TP") or key.endswith(
-            "_FP") or key.endswith("_FN"):
+        if key.endswith("_TP") or key.endswith("_FP") or key.endswith("_FN"):
           label_id, metric_name = key.rsplit("_", 1)
           key = "{} {}".format(label_list[int(label_id)], metric_name)
           # value = "{:.3%}".format(value)
