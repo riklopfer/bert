@@ -1342,8 +1342,7 @@ def main(_):
       if init_checkpoint != best_checkpoint:
         for fname in glob.glob(init_checkpoint + "*"):
           tf.logging.info("Removing bad checkpoint file: %s", fname)
-          # os.remove(fname)
-
+          os.remove(fname)
 
 
 if __name__ == "__main__":
