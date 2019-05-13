@@ -20,6 +20,7 @@ from __future__ import print_function
 
 import collections
 import csv
+import glob
 import os
 
 import numpy as np
@@ -80,6 +81,10 @@ flags.DEFINE_integer(
 flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
+flags.DEFINE_bool(
+    "keep_all_checkpoints", True,
+    "Eval option: if set to False, remove all checkpoints except for the best "
+    "one.")
 
 flags.DEFINE_bool(
     "do_predict", False,
@@ -1071,6 +1076,9 @@ def main(_):
       ckpt = tf.train.get_checkpoint_state(FLAGS.init_checkpoint)
       model_checkpoints = ckpt.all_model_checkpoint_paths
 
+  # best checkpoint is determined by Overall F1
+  best_checkpoint = None
+  best_f1 = None
   for epoch_n, init_checkpoint in enumerate(model_checkpoints):
     tf.logging.info("\n\n"
                     "********************\n"
@@ -1212,6 +1220,11 @@ def main(_):
         result["Overall Recall"] = "{:.3%}".format(recall)
         result["Overall F1"] = "{:.3%}".format(f1)
 
+      # Update best_checkpoint
+      if best_checkpoint is None or result["Overall F1"] > best_f1:
+        best_checkpoint = init_checkpoint
+        best_f1 = result["Overall F1"]
+
       # Cannot use '_' or else 'Average' will be treated as int
       result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
 
@@ -1219,6 +1232,7 @@ def main(_):
                                       "eval_results_{}.txt".format(epoch_n))
       with tf.gfile.GFile(output_eval_file, "w") as writer:
         tf.logging.info("***** Eval results for epoch %d *****", epoch_n)
+        writer.write("Epochs = {}\n\n".format(epoch_n))
         for key in sorted(result.keys()):
           value = result[key]
 
@@ -1250,7 +1264,7 @@ def main(_):
                                                 FLAGS.max_seq_length, tokenizer,
                                                 predict_file)
 
-      tf.logging.info("***** Running prediction*****")
+      tf.logging.info("***** Running prediction *****")
       tf.logging.info("  Num examples = %d (%d actual, %d padding)",
                       len(predict_examples), num_actual_predict_examples,
                       len(predict_examples) - num_actual_predict_examples)
@@ -1321,6 +1335,15 @@ def main(_):
       #     writer.write(output_line)
       #     num_written_lines += 1
       # assert num_written_lines == num_actual_predict_examples
+
+  tf.logging.info("Best checkpoint: %s", best_checkpoint)
+  if not FLAGS.keep_all_checkpoints:
+    for init_checkpoint in model_checkpoints:
+      if init_checkpoint != best_checkpoint:
+        for fname in glob.glob(init_checkpoint + "*"):
+          tf.logging.info("Removing bad checkpoint file: %s", fname)
+          # os.remove(fname)
+
 
 
 if __name__ == "__main__":
