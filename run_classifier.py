@@ -82,7 +82,7 @@ flags.DEFINE_bool("do_train", False, "Whether to run training.")
 
 flags.DEFINE_bool("do_eval", False, "Whether to run eval on the dev set.")
 flags.DEFINE_bool(
-    "keep_all_checkpoints", True,
+    "keep_all_checkpoints", False,
     "Eval option: if set to False, remove all checkpoints except for the best "
     "one.")
 
