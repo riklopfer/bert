@@ -332,7 +332,7 @@ def main(_):
         tf.logging.info("Sub-optimal checkpoint: %s", ckpt_path)
         for fname in glob.glob(ckpt_path + "*"):
           tf.logging.info("Removing bad checkpoint file: %s", fname)
-          os.remove(fname)
+          # os.remove(fname)
 
 
 if __name__ == "__main__":
