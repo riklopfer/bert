@@ -1285,9 +1285,9 @@ def main(_):
         num_written_lines = 0
         tf.logging.info("***** Predict results *****")
         if predict_examples[0].text_b is None:
-          tsv_header = ("TextA", "Actual", "Predicted", "Probability")
+          tsv_header = ("TextA", "Predicted", "Actual", "Probability")
         else:
-          tsv_header = ("TextA", "TextB", "Actual", "Predicted", "Probability")
+          tsv_header = ("TextA", "TextB", "Predicted", "Actual", "Probability")
 
         writer.write("\t".join(tsv_header) + "\n")
         for (i, prediction) in enumerate(result):
@@ -1299,12 +1299,13 @@ def main(_):
 
           probabilities = prediction["probabilities"]
 
-          # text elements
+          # Text A
           tsv_elements = [predict_examples[i].text_a]
           if predict_examples[i].text_b is not None:
+            # (Optional) Text B
             tsv_elements.append(predict_examples[i].text_b)
 
-          # predicted label
+          # Predicted label
           predicted_idx = np.argmax(probabilities)
           predicted_label = label_list[predicted_idx]
           tsv_elements.append(predicted_label)
