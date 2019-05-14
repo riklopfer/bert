@@ -208,9 +208,7 @@ def main(_):
         use_tpu=FLAGS.use_tpu,
         model_fn=model_fn,
         config=run_config,
-        train_batch_size=FLAGS.train_batch_size,
-        eval_batch_size=FLAGS.eval_batch_size,
-        predict_batch_size=FLAGS.predict_batch_size)
+        eval_batch_size=FLAGS.eval_batch_size)
 
     eval_examples = processor.get_dev_examples(FLAGS.data_dir)
     num_actual_eval_examples = len(eval_examples)
