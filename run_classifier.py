@@ -1347,6 +1347,9 @@ def main(_):
 
 
 if __name__ == "__main__":
+  raise AssertionError("Please do not use this script anymore. Instead use "
+                       "run_classifier_train, run_classifier_eval, "
+                       "or run_classifier_predict")
   flags.mark_flag_as_required("data_dir")
   flags.mark_flag_as_required("records_dir")
   flags.mark_flag_as_required("task_name")
