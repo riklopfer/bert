@@ -165,7 +165,7 @@ def main(_):
       num_labels=len(label_list),
       negative_label_idx=negative_label_idx,
       init_checkpoint=init_checkpoint,
-      learning_rate=FLAGS.learning_rate,
+      learning_rate=None,
       num_train_steps=num_train_steps,
       num_warmup_steps=num_warmup_steps,
       use_tpu=FLAGS.use_tpu,
