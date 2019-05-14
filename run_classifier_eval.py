@@ -18,17 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import collections
-import csv
 import glob
-import os
-
-import numpy as np
-import tensorflow as tf
-
-import modeling
-import optimization
-import tokenization
 
 from run_classifier_common import *
 
@@ -116,12 +106,12 @@ flags.DEFINE_integer(
     "num_tpu_cores", 8,
     "Only used if `use_tpu` is True. Total number of TPU cores to use.")
 
+
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
                                                 FLAGS.init_checkpoint)
-
 
   bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
@@ -326,7 +316,14 @@ def main(_):
         writer.write("%s = %s\n" % (key, str(value)))
 
   tf.logging.info("Best checkpoint: %s", best_checkpoint)
-  if not FLAGS.keep_all_checkpoints:
+  if not FLAGS.keep_all_checkpoints and len(model_checkpoints) > 1:
+    checkpoints_file = os.path.join(FLAGS.init_checkpoint, "checkpoint")
+    with tf.gfile.GFile(checkpoints_file, 'w') as ckpt_file:
+      ckpt_file.write('model_checkpoint_path: "{}"\n'.
+                      format(os.path.basename(best_checkpoint)))
+      ckpt_file.write('all_model_checkpoint_paths: "{}"\n'.
+                      format(os.path.basename(best_checkpoint)))
+
     for ckpt_path in model_checkpoints:
       if ckpt_path != best_checkpoint:
         tf.logging.info("Removing sub-optimal checkpoint: %s", ckpt_path)
