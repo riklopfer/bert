@@ -155,8 +155,7 @@ def main(_):
     tpu_cluster_resolver = tf.contrib.cluster_resolver.TPUClusterResolver(
         FLAGS.tpu_name, zone=FLAGS.tpu_zone, project=FLAGS.gcp_project)
 
-  # use this by default, but over-ride if we are training. Save once per epoch
-  save_checkpoint_steps = FLAGS.save_checkpoints_steps
+  save_checkpoint_steps = None
 
   train_examples = None
   num_train_steps = None
