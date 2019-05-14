@@ -329,10 +329,10 @@ def main(_):
   if not FLAGS.keep_all_checkpoints:
     for ckpt_path in model_checkpoints:
       if ckpt_path != best_checkpoint:
-        tf.logging.info("Sub-optimal checkpoint: %s", ckpt_path)
+        tf.logging.info("Removing sub-optimal checkpoint: %s", ckpt_path)
         for fname in glob.glob(ckpt_path + ".*"):
-          tf.logging.info("Removing bad checkpoint file: %s", fname)
-          # os.remove(fname)
+          # tf.logging.info("Removing bad checkpoint file: %s", fname)
+          os.remove(fname)
 
 
 if __name__ == "__main__":
