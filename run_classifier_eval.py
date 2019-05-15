@@ -71,7 +71,7 @@ flags.DEFINE_integer(
     "than this will be padded.")
 
 flags.DEFINE_bool(
-    "keep_all_checkpoints", False,
+    "keep_all_checkpoints", True,
     "Eval option: if set to False, remove all checkpoints except for the best "
     "one.")
 
