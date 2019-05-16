@@ -201,7 +201,11 @@ def main(_):
       config=run_config,
       train_batch_size=FLAGS.train_batch_size)
 
-  train_file = os.path.join(FLAGS.records_dir, "train.tf_record")
+  records_dir = FLAGS.records_dir
+  if records_dir is None:
+    records_dir = FLAGS.data_dir
+
+  train_file = os.path.join(records_dir, "train.tf_record")
   if os.path.exists(train_file):
     tf.logging.info("train file (%s) already exists -- no overwriting.",
                     train_file)

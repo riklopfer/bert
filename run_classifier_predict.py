@@ -189,7 +189,11 @@ def main(_):
     while len(predict_examples) % FLAGS.predict_batch_size != 0:
       predict_examples.append(PaddingInputExample())
 
-  predict_file = os.path.join(FLAGS.records_dir, "predict.tf_record")
+  records_dir = FLAGS.records_dir
+  if records_dir is None:
+    records_dir = FLAGS.data_dir
+
+  predict_file = os.path.join(records_dir, "predict.tf_record")
   if os.path.exists(predict_file):
     tf.logging.info("predict file (%s) already exists -- not overwriting",
                     predict_file)

@@ -211,7 +211,11 @@ def main(_):
       while len(eval_examples) % FLAGS.eval_batch_size != 0:
         eval_examples.append(PaddingInputExample())
 
-    eval_file = os.path.join(FLAGS.records_dir, "eval.tf_record")
+    records_dir = FLAGS.records_dir
+    if records_dir is None:
+      records_dir = FLAGS.data_dir
+
+    eval_file = os.path.join(records_dir, "eval.tf_record")
     if os.path.exists(eval_file):
       tf.logging.info("eval file (%s) already exists -- not overwriting",
                       eval_file)
