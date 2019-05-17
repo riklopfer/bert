@@ -143,7 +143,8 @@ def main(_):
       if key.endswith("_TP") or key.endswith("_FP") or key.endswith("_FN"):
         label_id, metric_name = key.rsplit("_", 1)
         key = "{} {}".format(label_list[int(label_id)], metric_name)
-        # value = "{:.3%}".format(value)
+      else:
+        value = "{:.3%}".format(value)
 
       res_string += "{} = {}\n".format(key, value)
 
@@ -282,33 +283,33 @@ def main(_):
       total_fn += false_neg
 
       if true_pos == 0:
-        result["{} Precision".format(label)] = "{:.3%}".format(0)
-        result["{} Recall".format(label)] = "{:.3%}".format(0)
-        result["{} F1".format(label)] = "{:.3%}".format(0)
+        result["{} Precision".format(label)] = 0
+        result["{} Recall".format(label)] = 0
+        result["{} F1".format(label)] = 0
       else:
         precision = true_pos / (true_pos + false_pos)
         recall = true_pos / (true_pos + false_neg)
         f1 = 2 * precision * recall / (precision + recall)
         total_f1 += f1
-        result["{} Precision".format(label)] = "{:.3%}".format(precision)
-        result["{} Recall".format(label)] = "{:.3%}".format(recall)
-        result["{} F1".format(label)] = "{:.3%}".format(f1)
+        result["{} Precision".format(label)] = precision
+        result["{} Recall".format(label)] = recall
+        result["{} F1".format(label)] = f1
 
     # Compute Overall F1
     if total_tp == 0:
-      result["Overall Precision"] = "{:.3%}".format(0)
-      result["Overall Recall"] = "{:.3%}".format(0)
-      result["Overall F1"] = "{:.3%}".format(0)
+      result["Overall Precision"] = 0
+      result["Overall Recall"] = 0
+      result["Overall F1"] = 0
     else:
       precision = total_tp / (total_tp + total_fn)
       recall = total_tp / (total_tp + total_fp)
       f1 = 2 * precision * recall / (precision + recall)
-      result["Overall Precision"] = "{:.3%}".format(precision)
-      result["Overall Recall"] = "{:.3%}".format(recall)
-      result["Overall F1"] = "{:.3%}".format(f1)
+      result["Overall Precision"] = precision
+      result["Overall Recall"] = recall
+      result["Overall F1"] = f1
 
     # Cannot use '_' or else 'Average' will be treated as int
-    result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
+    result["Average F1"] = total_f1 / len(label_list)
 
     all_results.append(
         (init_checkpoint, result)
@@ -328,7 +329,6 @@ def main(_):
   sorted_results = sorted(all_results,
                           key=lambda (_, result): -result["Overall F1"])
   best_checkpoint, best_result = sorted_results[0]
-
 
   tf.logging.info("Best checkpoint: %s", best_checkpoint)
   tf.logging.info(result_to_string(best_result))
