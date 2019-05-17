@@ -135,8 +135,11 @@ def main(_):
   if processor.get_negative_label() is not None:
     negative_label_idx = label_list.index(processor.get_negative_label())
 
-  def result_to_string(result):
-    res_string = ""
+  def result_to_string(result, epoch=None):
+    res_string = "\n"
+    if epoch is not None:
+      res_string += "Epoch = {}".format(epoch)
+
     for key in sorted(result.keys()):
       value = result[key]
 
@@ -312,7 +315,7 @@ def main(_):
     result["Average F1"] = total_f1 / len(label_list)
 
     all_results.append(
-        (init_checkpoint, result)
+        (epoch_n, init_checkpoint, result)
     )
 
     output_eval_file = os.path.join(FLAGS.output_dir,
@@ -322,16 +325,16 @@ def main(_):
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results for epoch %d *****", epoch_n)
       writer.write("Epochs = {}\n\n".format(epoch_n))
-      writer.write(result_to_string(result))
-      tf.logging.info(result_to_string(result))
+      writer.write(result_to_string(result, epoch_n))
+      tf.logging.info(result_to_string(result, epoch_n))
 
   # sort results by "Overall F1"
   sorted_results = sorted(all_results,
-                          key=lambda (_, result): -result["Overall F1"])
-  best_checkpoint, best_result = sorted_results[0]
+                          key=lambda (e, c, result): -result["Overall F1"])
+  best_epoch, best_checkpoint, best_result = sorted_results[0]
 
   tf.logging.info("Best checkpoint: %s", best_checkpoint)
-  tf.logging.info(result_to_string(best_result))
+  tf.logging.info(result_to_string(best_result, best_epoch))
 
   if not FLAGS.keep_all_checkpoints and len(model_checkpoints) > 1:
     best_basename = os.path.basename(best_checkpoint)
