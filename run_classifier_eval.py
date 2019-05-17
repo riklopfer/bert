@@ -138,7 +138,7 @@ def main(_):
   def result_to_string(result, epoch=None):
     res_string = "\n"
     if epoch is not None:
-      res_string += "Epoch = {}".format(epoch)
+      res_string += "Epoch = {}\n".format(epoch)
 
     for key in sorted(result.keys()):
       value = result[key]
