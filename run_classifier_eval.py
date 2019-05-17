@@ -135,6 +135,20 @@ def main(_):
   if processor.get_negative_label() is not None:
     negative_label_idx = label_list.index(processor.get_negative_label())
 
+  def result_to_string(result):
+    res_string = ""
+    for key in sorted(result.keys()):
+      value = result[key]
+
+      if key.endswith("_TP") or key.endswith("_FP") or key.endswith("_FN"):
+        label_id, metric_name = key.rsplit("_", 1)
+        key = "{} {}".format(label_list[int(label_id)], metric_name)
+        # value = "{:.3%}".format(value)
+
+      res_string += "{} = {}\n".format(key, value)
+
+    return res_string
+
   tokenizer = tokenization.FullTokenizer(
       vocab_file=FLAGS.vocab_file,
       do_lower_case=FLAGS.do_lower_case,
@@ -170,9 +184,7 @@ def main(_):
     ckpt = tf.train.get_checkpoint_state(FLAGS.init_checkpoint)
     model_checkpoints = ckpt.all_model_checkpoint_paths
 
-  # best checkpoint is determined by Overall F1
-  best_checkpoint = None
-  best_f1 = None
+  all_results = []
   for epoch_n, init_checkpoint in enumerate(model_checkpoints):
     tf.logging.info("\n\n"
                     "********************\n"
@@ -295,13 +307,12 @@ def main(_):
       result["Overall Recall"] = "{:.3%}".format(recall)
       result["Overall F1"] = "{:.3%}".format(f1)
 
-    # Update best_checkpoint
-    if best_checkpoint is None or result["Overall F1"] > best_f1:
-      best_checkpoint = init_checkpoint
-      best_f1 = result["Overall F1"]
-
     # Cannot use '_' or else 'Average' will be treated as int
     result["Average F1"] = '{:.3%}'.format(total_f1 / len(label_list))
+
+    all_results.append(
+        (init_checkpoint, result)
+    )
 
     output_eval_file = os.path.join(FLAGS.output_dir,
                                     "eval_results_{:02d}-{}.txt".
@@ -310,25 +321,26 @@ def main(_):
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results for epoch %d *****", epoch_n)
       writer.write("Epochs = {}\n\n".format(epoch_n))
-      for key in sorted(result.keys()):
-        value = result[key]
+      writer.write(result_to_string(result))
+      tf.logging.info(result_to_string(result))
 
-        if key.endswith("_TP") or key.endswith("_FP") or key.endswith("_FN"):
-          label_id, metric_name = key.rsplit("_", 1)
-          key = "{} {}".format(label_list[int(label_id)], metric_name)
-          # value = "{:.3%}".format(value)
+  # sort results by "Overall F1"
+  sorted_results = sorted(all_results,
+                          key=lambda (_, result): -result["Overall F1"])
+  best_checkpoint, best_result = sorted_results[0]
 
-        tf.logging.info("  %s = %s", key, str(value))
-        writer.write("%s = %s\n" % (key, str(value)))
 
   tf.logging.info("Best checkpoint: %s", best_checkpoint)
+  tf.logging.info(result_to_string(best_result))
+
   if not FLAGS.keep_all_checkpoints and len(model_checkpoints) > 1:
+    best_basename = os.path.basename(best_checkpoint)
     checkpoints_file = os.path.join(FLAGS.init_checkpoint, "checkpoint")
     with tf.gfile.GFile(checkpoints_file, 'w') as ckpt_file:
       ckpt_file.write('model_checkpoint_path: "{}"\n'.
-                      format(os.path.basename(best_checkpoint)))
+                      format(best_basename))
       ckpt_file.write('all_model_checkpoint_paths: "{}"\n'.
-                      format(os.path.basename(best_checkpoint)))
+                      format(best_basename))
 
     for ckpt_path in model_checkpoints:
       if ckpt_path != best_checkpoint:
