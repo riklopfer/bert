@@ -333,9 +333,7 @@ def main(_):
                           key=lambda (e, c, result): -result["Overall F1"])
   best_epoch, best_checkpoint, best_result = sorted_results[0]
 
-  tf.logging.info("Best checkpoint: %s", best_checkpoint)
-  tf.logging.info(result_to_string(best_result, best_epoch))
-
+  # remove sub optimal ones
   if not FLAGS.keep_all_checkpoints and len(model_checkpoints) > 1:
     best_basename = os.path.basename(best_checkpoint)
     checkpoints_file = os.path.join(FLAGS.init_checkpoint, "checkpoint")
@@ -351,6 +349,10 @@ def main(_):
         for fname in glob.glob(ckpt_path + ".*"):
           # tf.logging.info("Removing bad checkpoint file: %s", fname)
           os.remove(fname)
+
+  # Log best run info
+  tf.logging.info("Best checkpoint: %s", best_checkpoint)
+  tf.logging.info(result_to_string(best_result, best_epoch))
 
 
 if __name__ == "__main__":
