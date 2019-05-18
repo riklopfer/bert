@@ -310,18 +310,57 @@ class SocialHxProcessor(DataProcessor):
         if line:
           labels.append(line)
       return labels
-    # return [
-    #   "MedicationOrder",
-    #   "Smoking",
-    #   "Alcohol",
-    #   "Drugs",
-    #   "Diabetes",
-    #   "Weight",
-    #   "NoLabel"
-    # ]
 
   def get_negative_label(self):
     return "NoLabel"
+
+  def _create_examples(self, lines, set_type):
+    """Creates examples for the training and dev sets."""
+    examples = []
+    for (i, line) in enumerate(filter(None, lines)):
+      guid = "%s-%s" % (set_type, i)
+      left_context = tokenization.convert_to_unicode(line[0])
+      target = tokenization.convert_to_unicode(line[1])
+      right_context = tokenization.convert_to_unicode(line[2])
+      label = tokenization.convert_to_unicode(line[3])
+
+      context = u" ".join((left_context, right_context))
+      # this will happen if context is not included
+      if not context.strip():
+        context = None
+
+      examples.append(
+          InputExample(guid=guid, text_a=target, text_b=context, label=label))
+    return examples
+
+
+class SocialHxClassOnlyProcessor(DataProcessor):
+  """Processor for the CoLA data set (GLUE version)."""
+
+  def get_train_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "train.tsv")), "train")
+
+  def get_dev_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "dev.tsv")), "dev")
+
+  def get_test_examples(self, data_dir):
+    """See base class."""
+    return self._create_examples(
+        self._read_tsv(os.path.join(data_dir, "test.tsv")), "test")
+
+  def get_labels(self, data_dir=None):
+    """See base class."""
+    with open(os.path.join(data_dir, 'label_vocab.txt'), 'rb') as ifp:
+      labels = []
+      for line in ifp:
+        line = line.strip()
+        if line:
+          labels.append(line)
+      return labels
 
   def _create_examples(self, lines, set_type):
     """Creates examples for the training and dev sets."""
@@ -892,6 +931,7 @@ PROCESSORS = {
   "mrpc": MrpcProcessor,
   "xnli": XnliProcessor,
   "socialhx": SocialHxProcessor,
+  "socialhxcls": SocialHxClassOnlyProcessor,
   "sectioncodes": SectionCodeProcessor,
   "wordsense": WordSenseProcessor,
 }
