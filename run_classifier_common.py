@@ -303,15 +303,22 @@ class SocialHxProcessor(DataProcessor):
 
   def get_labels(self, data_dir=None):
     """See base class."""
-    return [
-      "MedicationOrder",
-      "Smoking",
-      "Alcohol",
-      "Drugs",
-      "Diabetes",
-      "Weight",
-      "NoLabel"
-    ]
+    with open(os.path.join(data_dir, 'label_vocab.txt'), 'rb') as ifp:
+      labels = []
+      for line in ifp:
+        line = line.strip()
+        if line:
+          labels.append(line)
+      return labels
+    # return [
+    #   "MedicationOrder",
+    #   "Smoking",
+    #   "Alcohol",
+    #   "Drugs",
+    #   "Diabetes",
+    #   "Weight",
+    #   "NoLabel"
+    # ]
 
   def get_negative_label(self):
     return "NoLabel"
