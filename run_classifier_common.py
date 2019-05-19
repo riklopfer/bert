@@ -312,7 +312,7 @@ class SocialHxProcessor(DataProcessor):
       return labels
 
   def get_negative_label(self):
-    return "NoLabel"
+    return "-"
 
   def _create_examples(self, lines, set_type):
     """Creates examples for the training and dev sets."""
