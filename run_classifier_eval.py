@@ -264,9 +264,6 @@ def main(_):
     result = estimator.evaluate(input_fn=eval_input_fn, steps=eval_steps)
 
     # Compute Precision, Recall, and F1
-    exclude_ids = set()
-    if processor.get_negative_label() is not None:
-      exclude_ids.add(label_list.index(processor.get_negative_label()))
 
     total_tp, total_fp, total_fn = 0., 0., 0.
     total_f1 = 0.
@@ -277,7 +274,7 @@ def main(_):
       false_neg = result["{}_FN".format(label_id)]
 
       # Exclude negative label from overall metric
-      if label_id in exclude_ids:
+      if label_id == negative_label_idx:
         tf.logging.info("Excluding '%s' from metrics", label)
         continue
 
@@ -304,15 +301,12 @@ def main(_):
       result["Overall Recall"] = 0
       result["Overall F1"] = 0
     else:
-      precision = total_tp / (total_tp + total_fn)
-      recall = total_tp / (total_tp + total_fp)
+      precision = total_tp / (total_tp + total_fp)
+      recall = total_tp / (total_tp + total_fn)
       f1 = 2 * precision * recall / (precision + recall)
       result["Overall Precision"] = precision
       result["Overall Recall"] = recall
       result["Overall F1"] = f1
-
-    # Cannot use '_' or else 'Average' will be treated as int
-    result["Average F1"] = total_f1 / len(label_list)
 
     all_results.append(
         (epoch_n, init_checkpoint, result)
