@@ -76,6 +76,11 @@ flags.DEFINE_float("num_train_epochs", 3.0,
                    "Total number of training epochs to perform.")
 
 flags.DEFINE_float(
+    "neg_sample_rate", 1.0,
+    "Rate at which to include negative examples. "
+    "1.0 -> always include")
+
+flags.DEFINE_float(
     "warmup_proportion", 0.1,
     "Proportion of training to perform linear learning rate warmup for. "
     "E.g., 0.1 = 10% of training.")
@@ -136,10 +141,19 @@ def main(_):
 
   processor = PROCESSORS[task_name]()
 
+  neg_sample_rate = FLAGS.neg_sample_rate
+
+  assert 0 <= neg_sample_rate <= 0, \
+    "Invalid value for neg_sample_rate: {}".format(neg_sample_rate)
+
+  if neg_sample_rate < 1 and processor.get_negative_label() is None:
+    raise AssertionError("Negative sampling only works for projects "
+                         "with negative labels")
+
   label_list = processor.get_labels(FLAGS.data_dir)
-  negative_label_idx = None
+  neg_label_idx = None
   if processor.get_negative_label() is not None:
-    negative_label_idx = label_list.index(processor.get_negative_label())
+    neg_label_idx = label_list.index(processor.get_negative_label())
 
   tokenizer = tokenization.FullTokenizer(
       vocab_file=FLAGS.vocab_file,
@@ -157,7 +171,6 @@ def main(_):
   train_examples = None
   num_train_steps = None
   num_warmup_steps = None
-
 
   train_examples = processor.get_train_examples(FLAGS.data_dir)
   steps_per_epoch = len(train_examples) // FLAGS.train_batch_size
@@ -185,7 +198,7 @@ def main(_):
   model_fn = model_fn_builder(
       bert_config=bert_config,
       num_labels=len(label_list),
-      negative_label_idx=negative_label_idx,
+      negative_label_idx=neg_label_idx,
       init_checkpoint=init_checkpoint,
       learning_rate=FLAGS.learning_rate,
       num_train_steps=num_train_steps,
@@ -217,11 +230,22 @@ def main(_):
   tf.logging.info("  Num examples = %d", len(train_examples))
   tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
   tf.logging.info("  Num steps = %d", num_train_steps)
-  train_input_fn = file_based_input_fn_builder(
-      input_file=train_file,
-      seq_length=FLAGS.max_seq_length,
-      is_training=True,
-      drop_remainder=True)
+  tf.logging.info("  Neg sample rate = %f", neg_sample_rate)
+
+  if neg_sample_rate < 1:
+    train_input_fn = sampled_file_based_input_fn_builder(
+        input_file=train_file,
+        seq_length=FLAGS.max_seq_length,
+        drop_remainder=True,
+        neg_sample_rate=neg_sample_rate,
+        neg_label_index=neg_label_idx
+    )
+  else:
+    train_input_fn = file_based_input_fn_builder(
+        input_file=train_file,
+        seq_length=FLAGS.max_seq_length,
+        is_training=True,
+        drop_remainder=True)
   estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
 
