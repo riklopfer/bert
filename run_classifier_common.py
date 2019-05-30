@@ -686,8 +686,12 @@ def sampled_file_based_input_fn_builder(input_file, seq_length, drop_remainder,
     return example
 
   def sample_filter(record):
-    return tf.logical_and(
-        tf.equal(record["label_ids"], neg_label_index),
+    # include if,
+    # (a) positive example or
+    # (b) rng < sample_rate
+
+    return tf.logical_or(
+        tf.not_equal(record["label_ids"], neg_label_index),
         tf.less(tf.random.uniform(shape=(), seed=77177717), neg_sample_rate)
     )
 
