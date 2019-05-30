@@ -143,7 +143,7 @@ def main(_):
 
   neg_sample_rate = FLAGS.neg_sample_rate
 
-  assert 0 <= neg_sample_rate <= 0, \
+  assert 0 <= neg_sample_rate <= 1, \
     "Invalid value for neg_sample_rate: {}".format(neg_sample_rate)
 
   if neg_sample_rate < 1 and processor.get_negative_label() is None:
