@@ -119,7 +119,7 @@ flags.DEFINE_integer(
 
 
 def main(_):
-  tf.logging.set_verbosity(tf.logging.DEBUG)
+  tf.logging.set_verbosity(tf.logging.INFO)
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
                                                 FLAGS.init_checkpoint)
@@ -230,9 +230,9 @@ def main(_):
   tf.logging.info("  Num examples = %d", len(train_examples))
   tf.logging.info("  Batch size = %d", FLAGS.train_batch_size)
   tf.logging.info("  Num steps = %d", num_train_steps)
-  tf.logging.info("  Neg sample rate = %f", neg_sample_rate)
 
   if neg_sample_rate < 1:
+    tf.logging.info("  Neg sample rate = %.2f", neg_sample_rate)
     train_input_fn = sampled_file_based_input_fn_builder(
         input_file=train_file,
         seq_length=FLAGS.max_seq_length,
