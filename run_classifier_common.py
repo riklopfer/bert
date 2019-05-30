@@ -21,7 +21,6 @@ from __future__ import print_function
 import collections
 import csv
 import os
-import random
 
 import tensorflow as tf
 
@@ -663,7 +662,6 @@ def sampled_file_based_input_fn_builder(input_file, seq_length, drop_remainder,
     neg_sample_rate, neg_label_index):
   """Creates an `input_fn` closure to be passed to TPUEstimator for training only."""
   assert 0 <= neg_sample_rate <= 1
-  rng = random.Random(234523534)
 
   name_to_features = {
     "input_ids": tf.FixedLenFeature([seq_length], tf.int64),
@@ -687,6 +685,12 @@ def sampled_file_based_input_fn_builder(input_file, seq_length, drop_remainder,
 
     return example
 
+  def sample_filter(record):
+    return tf.logical_and(
+        tf.equal(record["label_ids"], neg_label_index),
+        tf.less(tf.random.uniform(shape=(), seed=77177717), neg_sample_rate)
+    )
+
   def input_fn(params):
     """The actual input function."""
     batch_size = params["batch_size"]
@@ -698,8 +702,7 @@ def sampled_file_based_input_fn_builder(input_file, seq_length, drop_remainder,
     d = d.repeat()
     d = d.shuffle(buffer_size=100)
     d = d.map(lambda record: _decode_record(record, name_to_features))
-    d = d.filter(lambda record: record["label_ids"] == neg_label_index and
-                                rng.random() < neg_sample_rate)
+    d = d.filter(sample_filter)
     d = d.batch(batch_size=batch_size, drop_remainder=drop_remainder)
 
     return d
