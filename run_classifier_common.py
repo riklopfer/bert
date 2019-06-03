@@ -499,6 +499,17 @@ def convert_single_example(ex_index, example, label_list, max_seq_length,
   if example.text_b:
     tokens_b = tokenizer.tokenize(example.text_b)
 
+  # (rklopfer) Hard coding this for now. Generally we want to keep all the (a)
+  # tokens because they are what we are running prediction on.
+  preserve_a = True
+  if tokens_b is not None and preserve_a:
+    num_b_tokens = max_seq_length - len(tokens_a) - 3
+    # we want to have at least one token in tokens b
+    if num_b_tokens <= 0:
+      tokens_b = None
+    else:
+      tokens_b = tokens_b[:num_b_tokens]
+
   if tokens_b:
     # Modifies `tokens_a` and `tokens_b` in place so that the total
     # length is less than the specified length.
