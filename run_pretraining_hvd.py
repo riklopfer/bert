@@ -475,7 +475,8 @@ def main(_):
         input_files=input_files,
         max_seq_length=FLAGS.max_seq_length,
         max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-        is_training=True)
+        is_training=True,
+        num_cpu_threads=8)
 
     hooks = [hvd.BroadcastGlobalVariablesHook(0)]
     estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps, hooks=hooks)
