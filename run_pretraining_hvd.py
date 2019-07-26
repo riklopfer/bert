@@ -407,7 +407,7 @@ def _decode_record(record, name_to_features):
 
 def main(_):
   hvd.init()
-  FLAGS.output_dir = FLAGS.output_dir if hvd.rank() == 0 else os.path.join(FLAGS.output_dir, str(hvd.rank()))
+  FLAGS.output_dir = FLAGS.output_dir if hvd.rank() == 0 else None
   FLAGS.num_train_steps = FLAGS.num_train_steps // hvd.size()
   FLAGS.num_warmup_steps = FLAGS.num_warmup_steps // hvd.size()
 
