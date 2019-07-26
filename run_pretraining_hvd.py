@@ -407,7 +407,7 @@ def _decode_record(record, name_to_features):
 
 def main(_):
   hvd.init()
-  output_dir = FLAGS.output_dir if hvd.rank() == 0 else None
+  FLAGS.output_dir = FLAGS.output_dir if hvd.rank() == 0 else os.path.join(FLAGS.output_dir, str(hvd.rank()))
   FLAGS.num_train_steps = FLAGS.num_train_steps // hvd.size()
   FLAGS.num_warmup_steps = FLAGS.num_warmup_steps // hvd.size()
 
@@ -418,8 +418,7 @@ def main(_):
 
   bert_config = modeling.BertConfig.from_json_file(FLAGS.bert_config_file)
 
-  if output_dir:
-    tf.gfile.MakeDirs(output_dir)
+  tf.gfile.MakeDirs(FLAGS.output_dir)
 
   input_files = []
   for input_pattern in FLAGS.input_file.split(","):
@@ -442,7 +441,7 @@ def main(_):
   run_config = tf.contrib.tpu.RunConfig(
       cluster=tpu_cluster_resolver,
       master=FLAGS.master,
-      model_dir=output_dir,
+      model_dir=FLAGS.output_dir,
       save_checkpoints_steps=FLAGS.save_checkpoints_steps,
       tpu_config=tf.contrib.tpu.TPUConfig(
           iterations_per_loop=FLAGS.iterations_per_loop,
@@ -476,8 +475,7 @@ def main(_):
         input_files=input_files,
         max_seq_length=FLAGS.max_seq_length,
         max_predictions_per_seq=FLAGS.max_predictions_per_seq,
-        is_training=True,
-        num_cpu_threads=8)
+        is_training=True)
 
     hooks = [hvd.BroadcastGlobalVariablesHook(0)]
     estimator.train(input_fn=train_input_fn, max_steps=FLAGS.num_train_steps, hooks=hooks)
@@ -495,7 +493,7 @@ def main(_):
     result = estimator.evaluate(
         input_fn=eval_input_fn, steps=FLAGS.max_eval_steps)
 
-    output_eval_file = os.path.join(output_dir, "eval_results.txt")
+    output_eval_file = os.path.join(FLAGS.output_dir, "eval_results.txt")
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results *****")
       for key in sorted(result.keys()):
