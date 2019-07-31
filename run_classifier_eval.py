@@ -318,7 +318,6 @@ def main(_):
                                            os.path.basename(init_checkpoint)))
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results for epoch %d *****", epoch_n)
-      writer.write("Epochs = {}\n\n".format(epoch_n))
       writer.write(result_to_string(result, epoch_n))
       tf.logging.info(result_to_string(result, epoch_n))
 
@@ -326,6 +325,11 @@ def main(_):
   sorted_results = sorted(all_results,
                           key=lambda (e, c, result): -result["Overall F1"])
   best_epoch, best_checkpoint, best_result = sorted_results[0]
+
+  output_eval_file = os.path.join(FLAGS.output_dir,
+                                  "eval_results_best.txt")
+  with tf.gfile.GFile(output_eval_file, "w") as writer:
+    writer.write(result_to_string(best_result, best_epoch))
 
   # remove sub optimal ones
   if not FLAGS.keep_all_checkpoints and len(model_checkpoints) > 1:
