@@ -136,7 +136,7 @@ def main(_):
     negative_label_idx = label_list.index(processor.get_negative_label())
 
   def result_to_string(result, epoch=None):
-    res_string = "\n"
+    res_string = ""
     if epoch is not None:
       res_string += "Epoch = {}\n".format(epoch)
 
@@ -319,7 +319,7 @@ def main(_):
     with tf.gfile.GFile(output_eval_file, "w") as writer:
       tf.logging.info("***** Eval results for epoch %d *****", epoch_n)
       writer.write(result_to_string(result, epoch_n))
-      tf.logging.info(result_to_string(result, epoch_n))
+      tf.logging.info("\n" + result_to_string(result, epoch_n))
 
   # sort results by "Overall F1"
   sorted_results = sorted(all_results,
@@ -350,7 +350,7 @@ def main(_):
 
   # Log best run info
   tf.logging.info("Best checkpoint: %s", best_checkpoint)
-  tf.logging.info(result_to_string(best_result, best_epoch))
+  tf.logging.info("\n" + result_to_string(best_result, best_epoch))
 
 
 if __name__ == "__main__":
