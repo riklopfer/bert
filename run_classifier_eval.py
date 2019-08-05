@@ -20,6 +20,8 @@ from __future__ import print_function
 
 import glob
 
+import mmpy
+
 from run_classifier_common import *
 
 flags = tf.flags
@@ -109,6 +111,7 @@ flags.DEFINE_integer(
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
+  mmpy.reserve_available_gpu(raise_if_none=True)
 
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
                                                 FLAGS.init_checkpoint)
