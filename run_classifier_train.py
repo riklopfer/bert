@@ -122,7 +122,7 @@ flags.DEFINE_integer(
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
-  mmpy.reserve_available_gpu(raise_if_none=True)
+  mmpy.mask_available_gpu(raise_if_none=True)
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
                                                 FLAGS.init_checkpoint)
 
