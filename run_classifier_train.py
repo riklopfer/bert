@@ -122,7 +122,7 @@ flags.DEFINE_integer(
 
 def main(_):
   tf.logging.set_verbosity(tf.logging.INFO)
-  mmpy.mask_available_gpu(raise_if_none=True)
+
   tokenization.validate_case_matches_checkpoint(FLAGS.do_lower_case,
                                                 FLAGS.init_checkpoint)
 
@@ -248,6 +248,8 @@ def main(_):
         seq_length=FLAGS.max_seq_length,
         is_training=True,
         drop_remainder=True)
+
+  mmpy.mask_available_gpu(raise_if_none=True)
   estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
 
 
